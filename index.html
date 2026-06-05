@@ -1,0 +1,3705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <title>Open Dataset Map Viewer</title>
+  <style>
+    html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden; /* Prevents page-level scrolling */
+    font-family: 'Open Sans', sans-serif;
+    }
+
+    /* Header */
+    #header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Title on left, image on right */
+    background-color: #ffffff;
+    font-size: 1.5em;
+    font-weight: 700;
+    font-family: 'Source Sans Pro';
+    padding: 0 15px;
+    height: 80px;
+    box-sizing: border-box;
+    }
+
+    #header-title {
+    flex: 1;
+    text-align: center;
+    line-height: 1.2;
+    color: #00326a;
+    }
+
+    #header-logo {
+    height: 80px;  /* Adjust as needed */
+    width: auto;
+    color: #000000;
+    }
+
+/* Container for sidebar and map */
+    #main {
+    display: flex;
+    height: calc(100% - 82px);
+    overflow: hidden;
+    }
+
+/* Left panel (sidebar) */
+    #sidebar {
+    width: 250px;
+    background: #f2f2f2;
+    border: 1px solid black;
+    // border-right: 1px solid #ccc;
+    padding: 10px;
+    margin-right: 2px;
+    box-sizing: border-box;
+    overflow-y: auto; /* Scroll only sidebar if needed */
+    }
+
+    /* Map area */
+    #map {
+    flex: 1;
+    height: 100%;
+    border: 1px solid black;
+    }
+
+
+    /* Accordion Styles */
+    .publisher {
+      margin-bottom: 1px;
+      cursor: pointer;
+      padding: 1px 0;
+      border-bottom: 1px solid #ddd;
+      user-select: none;
+    }
+
+    .publisher-header {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      color: #205081;
+    }
+
+    .toggle-icon {
+      margin-right: 8px;
+      font-size: 1.2em;
+      transition: transform 0.2s;
+    }
+
+    .toggle-icon.expanded {
+      transform: rotate(45deg);
+    }
+
+    .layer-list {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+
+    .layer-list.expanded {
+      max-height: 300px; /* Adjust as needed */
+      overflow-y: scroll;
+      border: 1px solid #ccc;
+    }
+
+
+
+    .layer-item {
+      padding: 4px 8px;
+      margin: 2px 0;
+      background: rgba(255,255,255,0.7);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      flex-wrap: wrap;
+      lign-items: center;
+    }
+
+    .layer-item:hover {
+      background: rgba(32,80,129,0.2);
+    }
+
+    .layer-item::before {
+      content: "•";
+      color: #205081;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+
+    .layer-item.selected {
+    background: rgba(32,80,129,0.4) !important;
+    font-weight: bold;
+    }
+
+    .layer-item.selected::before {
+    color: #ffffff;
+    }
+
+
+    .ol-popup {
+    position: absolute;
+    background: white;
+    border: 2px solid #205081;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    padding: 10px;
+    max-width: 350px;
+    font-size: 14px;
+    z-index: 1000;
+    min-width: 200px;
+    }
+
+    .ol-popup::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5);
+    pointer-events: none;
+    }
+
+    .ol-popup-close {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    background: none;
+    border: none;
+    font-size: 22px;
+    font-weight: bold;
+    color: #666;
+    cursor: pointer;
+    width: 25px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    line-height: 1;
+    }
+
+    .ol-popup-close:hover {
+    color: #205081;
+    }
+
+    .ol-popup-close:active {
+    transform: scale(0.9);
+    }
+
+    #popup-content {
+    margin-top: 15px;
+    max-height: 300px;
+    padding-bottom: 10px;
+    overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; 
+    }
+
+    #popup-content h4 {
+    color: #205081;
+    font-size: 16px;
+    margin: 0 0 8px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #eee;
+    }
+
+    #popup-content div {
+    margin: 4px 0;
+    padding: 2px 10px 0 0;
+    word-break: break-word;
+    }
+
+
+    .ol-mouse-position {
+    position: absolute !important;
+    top: auto !important;
+    bottom: 42px !important;
+    right: 5px !important;
+    left: auto !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: 170px !important;
+    font-size: 9pt !important;
+    text-align: right !important;
+    color: #000000 !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    border: 1px solid rgba(0,0,0,0.2) !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
+    line-height: 13pt !important;
+    z-index: 1000 !important;
+    pointer-events: none !important;
+    }
+
+    /* Override any child elements */
+    .ol-mouse-position * {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    }
+
+    .ol-control.ol-print {
+        bottom: 35px;
+        left: 5px;
+    }
+
+    .custom-attribution {
+    bottom: 5px !important;
+    right: 5px !important;
+    left: auto !important;
+    }
+
+    .ol-attribution.ol-uncollapsible {
+    bottom: 5px !important;
+    right: 5px !important;
+    }
+    .custom-attribution {
+      position:absolute;
+    bottom: 5px !important;
+    right: 5px !important;
+    left: auto !important;
+    max-width: calc(100% - 400px);
+    font-size: 10px !important;  /* Small font */
+    line-height: 1.2 !important;
+    padding: 4px 8px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+    z-index: 10;
+    }
+
+
+
+    /* Hide ALL expand/collapse buttons in custom attribution */
+    .custom-attribution button,
+    .custom-attribution .ol-attribution-button,
+    .custom-attribution button[title*="Attributions"],
+    .custom-attribution button[type="button"],
+    .custom-attribution .custom-attribution-expand {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    }
+
+    /* Extra safety - target the span inside */
+    .custom-attribution span.custom-attribution-expand {
+    display: none !important;
+    }
+
+
+    /* Single line layout */
+    .custom-attribution ul {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+    align-items: center !important;
+    flex-direction: row !important;
+    }
+
+    .custom-attribution li {
+    display: inline-block !important;
+    white-space: nowrap !important;
+    margin-right: 8px !important;
+    padding: 0 !important;
+    }
+
+    .custom-attribution li:not(:last-child)::after {
+    content: ' | ' !important;
+    margin-left: 4px !important;
+    }
+
+    .custom-attribution li:last-child::after {
+    display: none !important;
+    }
+
+    .custom-attribution a {
+    color: #205081 !important;
+    text-decoration: none !important;
+    }
+
+    .custom-attribution a:hover {
+    text-decoration: underline !important;
+    }
+
+.ol-attribution {
+  display: none !important;
+}
+
+.measure-toolbar {
+  bottom: 80px !important;
+  left: 1px !important;
+  background: rgba(255,255,255,0.9);
+  border-radius: 4px;
+  padding: 5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.measure-toolbar button {
+  background: #f8f8f8;
+  border: 1px solid #ccc;
+  padding: 6px 10px;
+  margin: 2px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.measure-toolbar button:hover {
+  background: #205081;
+  color: white;
+  border-color: #205081;
+}
+
+.measure-tooltip {
+  position: relative;
+  background: rgba(0,60,136,0.9);
+  border-radius: 4px;
+  color: white;
+  padding: 4px 8px;
+  font-weight: bold;
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.measure-tooltip-static {
+  background: rgba(255,204,51,0.9);
+  color: #000;
+  cursor: pointer;
+}
+
+.measure-tooltip-static:hover {
+  background: #ffcc33;
+}
+
+.layer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  margin: 2px 0;
+  background: rgba(255,255,255,0.7);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.layer-name {
+  flex: 1;
+}
+
+.layer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  margin: 2px 0;
+  background: rgba(255,255,255,0.7);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.layer-name {
+  flex: 1;
+}
+
+.layer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  gap: 4px;
+}
+
+.zoom-to-extent-btn,
+.layer-details-btn {
+  display: none;              /* still controlled by .selected rule if you wish */
+  background: #205081;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.layer-item.selected .zoom-to-extent-btn,
+.layer-item.selected .layer-details-btn {
+  display: flex;
+}
+
+
+
+
+.zoom-to-extent-btn:hover {
+  background: #1a4068;
+  transform: scale(1.1);
+}
+
+.zoom-to-extent-btn:active {
+  transform: scale(0.95);
+}
+
+.layer-item.selected {
+  background: rgba(32,80,129,0.4) !important;
+  font-weight: bold;
+}
+
+
+.layer-details-popup {
+  position: absolute;
+  top: 100px;
+  right: 30px;
+  max-width: 400px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid black;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  padding: 10px 12px;
+  z-index: 2000;
+  font-size: 13px;
+}
+
+.layer-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+#layer-details-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.layer-details-content p {
+  margin: 4px 0;
+}
+
+.layer-details-footer {
+  margin-top: 8px;
+  text-align: right;
+}
+
+.layer-details-download-btn {
+  background: #205081;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.layer-details-download-btn:hover {
+  background: #1a4068;
+}
+
+/* Target ol-ext PrintDialog closebox specifically */
+.ol-ext-print-dialog > form .ol-closebox {
+  right: 0.5em !important;
+	left: 16em !important;
+}
+
+/* Search button control (top-left) */
+.search-control {
+  top: 0.5em;
+  left: 3em;
+}
+
+.search-control button {
+  background: #205081;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.search-control button:hover {
+  background: #1a4068;
+}
+
+/* Slide-in search panel */
+.search-panel {
+  position: absolute;
+  top: 3.5em;
+  left: 0.5em;
+  min-width: 245px;
+  max-height: calc(100% - 4em);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid #ddd;
+  font-weight: bold;
+}
+
+.search-panel-title {
+  font-size: 17px;
+}
+
+.search-panel-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.search-panel-content {
+  padding: 8px;
+  overflow-y: auto;
+  font-size:0.9em;
+}
+
+input, select {
+    border: 2px solid #000;
+}
+
+fieldset {
+    clear: both;
+    display: block;
+    margin: 2px;
+    padding: 2px;
+    background-color: #f3f3f3;
+}
+
+label {
+    font-size: 0.95em;
+    line-height: 1.0em;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.visually-hidden {
+    position: absolute !important;
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%) !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    border: 0;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50px;
+    height: 50px;
+    z-index: 1000;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100000000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgb(0, 0, 0);
+    background-color: rgba(0, 0, 0, 0.4);
+    font-size: 0.9em;
+}
+
+
+#nlsgaz { 
+	width: 230px;
+	}
+
+#ngrgaz { 
+	width: 210px;
+	}
+
+/* Container to align input + button horizontally */
+.ngrsearch-row {
+  display: flex;
+  align-items: center;     /* vertical centering */
+  gap: 6px;                /* space between input and button */
+}
+
+/* Existing widths still OK */
+#ngrgaz {
+  width: 210px;
+}
+
+/* Remove float and negative margin from the button */
+#search-button-ngrgaz {
+  /* float:right; */        /* REMOVE */
+  /* margin: -1px 1px 0px 10px; */ /* REMOVE */
+
+  margin: 0;
+  padding: 2px 7px;
+  vertical-align: middle;
+  border: 1px solid #0000FF;
+  box-shadow: 0 1px 3px #ccc;
+  background-color: #FFF;
+  color: #4B4949;
+  font-size: 0.8em;
+  font-weight: 1000;
+  opacity: 0.95;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+#search-button-ngrgaz:hover {
+  background-color: #E8E8E8;
+}
+
+.layer-legend {
+  flex-basis: 100%;
+  width: 100%;
+  display: block;
+  margin: 4px 0 0 24px;
+}
+
+#layerSelect {
+    position: absolute;
+    top: 90px;
+    left: 350px;
+    z-index: 10;
+}
+
+
+
+/* CSS autocomplete */
+.ac-renderer{position:absolute;border:1px solid #898989;z-index: 30000;margin-top:-1px;max-width:500px; max-height: 400px; overflow: auto; font-size:.9em;}
+
+.ac-row{white-space:nowrap;position:relative;cursor:pointer;padding:5px;background-color:#fff;overflow:hidden !important; text-overflow:ellipsis}
+.ac-row .suffix{font-size:.8em;color:#7a7a7a;padding:.1em 0 0 5px}
+.ac-row .type{font-size:.8em;color:#aaa;display:block;width:100%}
+.ac-highlighted{font-weight:bold}
+.ac-active{color:#393939;background-color:#D6D6D6;}
+.ac-type{background-color:#990033;color:#FFFFFF;display:block;margin:2px;padding:2px;font-style:italic;float:right}
+
+
+
+
+  </style>
+
+  <script src="https://maps.nls.uk/assets/scripts/jquery.min.js" ></script>
+  <!-- Proj4 for coordinate systems -->
+    <script type="text/javascript" src="https://maps.nls.uk/geo/scripts/proj4.js"></script>
+
+
+
+  <!-- OpenLayers CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css">
+  <script src="https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"></script>
+
+  <link rel="stylesheet" href="https://maps.nls.uk/assets/css/ol-ext.css" /> 
+
+  <script type="text/javascript" src="scripts/ol-ext-2025-11.js"></script>
+
+		    <script type="text/javascript" src="https://maps.nls.uk/assets/scripts/jspdf.min.js" async></script>
+			<script type="text/javascript" src="https://maps.nls.uk/geo/scripts/FileSaver.min.js" async></script>
+			<script type="text/javascript" src="https://maps.nls.uk/geo/scripts/gaz.js"></script>
+</head>
+<body>
+
+ 
+<div id="header">
+  <div id="header-title">Open Dataset Map Viewer</div>
+  <img id="header-logo" src="img/ldl-logo.jpg" alt="Logo">
+</div>
+
+  <div id="main">
+
+		<div id="loading"><img src="https://maps.nls.uk/img/disallowed/loading-247px.gif" width="50px"  style="vertical-align: middle" alt="Loading gif" /></div>
+
+           <div id="Modal" class="modal" class="hidden">
+           
+             <!-- Modal content -->
+             <div class="modal-content" class="hidden">
+               <span class="modal-close" class="hidden">&times;</span>
+               <div id="modal-text" class="hidden"></div>
+
+             </div>
+           
+           </div>
+
+    <div id="sidebar">
+    <div class="publisher" data-target="naturescot">
+        <div class="publisher-header">
+        <span class="toggle-icon">+</span>
+        NatureScot
+        </div>
+        <ul class="layer-list" id="naturescot">
+        <li class="layer-item" data-typename="eld:protectedareas_pa30x30" data-attribution="naturescot-attribution">
+          <span class="layer-name">30x30 Protected Areas</span>
+          <button class="zoom-to-extent-btn" title="Zoom to extent">📍</button>
+          <button class="layer-details-btn" title="Layer details">ℹ️</button>
+        </li>
+        <li class="layer-item" data-typename="eld:AWI_SCOTLAND" data-attribution="naturescot-attribution">
+          <span class="layer-name">Ancient Woodland Inventory</span>
+          <button class="zoom-to-extent-btn" title="Zoom to extent">📍</button>
+          <button class="layer-details-btn" title="Layer details">ℹ️</button>
+        </li>
+        <li class="layer-item" data-typename="eld:BAREPEAT_SCOTLAND" data-attribution="naturescot-attribution">
+          <span class="layer-name">Bare Peat Areas from Remote Sensing</span>
+          <button class="zoom-to-extent-btn" title="Zoom to extent">📍</button>
+          <button class="layer-details-btn" title="Layer details">ℹ️</button>
+        </li>
+        <li class="layer-item" data-typename="eld:protectedareas_biogen" data-attribution="naturescot-attribution">
+          <span class="layer-name">Biogenetic Reserves</span>
+          <button class="zoom-to-extent-btn" title="Zoom to extent">📍</button>
+          <button class="layer-details-btn" title="Layer details">ℹ️</button>
+        </li>
+        <li class="layer-item" data-typename="eld:BIOSPH_SCOTLAND" data-attribution="naturescot-attribution">
+          <span class="layer-name">Biosphere Reserves</span>
+          <button class="zoom-to-extent-btn" title="Zoom to extent">📍</button>
+          <button class="layer-details-btn" title="Layer details">ℹ️</button>
+        </li>
+        <li class='layer-item' data-typename='eld:CPM2016_SCOTLAND' data-attribution='naturescot-attribution'>
+          <span class='layer-name'>Carbon And Peatland 2016 map</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+        <li class='layer-item' data-typename='eld:CPMW2016_SCOTLAND' data-attribution='naturescot-attribution'>
+          <span class='layer-name'>Carbon And Peatland 2016 map - Wind Farm Spatial Framework</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+        <li class='layer-item' data-typename='eld:CCFW_SCOTLAND' data-attribution='naturescot-attribution'>
+          <span class='layer-name'>Coilltean Caillte - Forgotten Woodlands of Scotland</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+        <li class='layer-item' data-typename='eld:PACRPT_SCOTLAND' data-attribution='naturescot-attribution'>
+          <span class='layer-name'>Completed Restoration Sites (centroid)</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+        <li class='layer-item' data-typename='eld:PACRPG_SCOTLAND' data-attribution='naturescot-attribution'>
+          <span class='layer-name'>Completed Restoration Sites (restoration footprint)</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+        <li class='layer-item' data-typename='eld:CPK_SCOTLAND' data-attribution='naturescot-attribution'>
+          <span class='layer-name'>Country Parks</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+        <li class='layer-item' data-typename='eld:CSGN-HNOA_SCOTLAND' data-attribution='naturescot-attribution'>
+          <span class='layer-name'>CSGN - Habitat Networks and Opportunity Areas 2021</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+        <li class='layer-item' data-typename='eld:CSGN-IHN_SCOTLAND' data-attribution='naturescot-attribution'>
+          <span class='layer-name'>CSGN - Integrated Habitat Networks 2010</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+        <li class='layer-item' data-typename='eld:DCD_SCOTLAND' data-attribution='naturescot-attribution'>
+          <span class='layer-name'>Deer Counts Deer Density</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+        <li class='layer-item' data-typename='eld:DCP_SCOTLAND' data-attribution='naturescot-attribution'>
+          <span class='layer-name'>Deer Counts Deer Groups</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+        <li class='layer-item' data-typename='eld:DMG_SCOTLAND' data-attribution='naturescot-attribution'>
+          <span class='layer-name'>Deer Management Groups</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+
+
+
+          <li class='layer-item' data-typename='eld:PAFSPT_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Feasibility Studies (centroid)</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:PAFSPG_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Feasibility Studies (survey area or restoration footprint)</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:GEMS-PMF_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>GEMS - Priority Marine Features</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:GCR_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Geological Conservation Review Sites</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:GFMDB_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Grassland Fungi Mapping Database for Scotland</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:HABMOS_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Habitat Map of Scotland</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:HABMOS-MW2023-RS_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>HabMoS - Mountain Woodland 2023 - Restoration Sites</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:HABMOS-MW2023-WRR_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>HabMoS - Mountain Woodland 2023 - Wild, relict or remnant</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:HABMOS-NVC-CLEANED-COV_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>HabMoS - NVC - No Overlaps - Coverages</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:HABMOS-NVC-CLEANED_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>HabMoS - NVC - No Overlaps - No Mosaics</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:HABMOS-NVC-CLEANED-MOS_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>HabMoS - NVC - No Overlaps - With Mosaics</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:JMW_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>John Muir Way</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:LCA_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Landscape Character Assessment</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:LSCMAP_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Landscape Map of Scotland</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:LNR_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Local Nature Reserves</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:LCALLTNP_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Loch Lomond and Trossachs NP LCA</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:MCA_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Marine Consultation Areas</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:MPA_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Marine Protected Areas</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:MARINESPABIRDS_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Marine SPA Birds data</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:MTNHAREPC_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Mountain Hare Percentage</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:MPM2025_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Muirburn Peatland Map 2025</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class="layer-item" data-typename="eld:protectedareas_nnr" data-attribution="naturescot-attribution">
+          <span class="layer-name">National Nature Reserves</span>
+          <button class="zoom-to-extent-btn" title="Zoom to extent">📍</button>
+          <button class="layer-details-btn" title="Layer details">ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:NHFZ_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Natural Heritage Futures Zones</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:NCO_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Nature Conservation Orders</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:NR_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Nature Reserves</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:NATURE30_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Nature30 Sites</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:NSAREA_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>NatureScot Area Boundaries</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:NSOFFICE_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>NatureScot Offices</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:NSLAND_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>NatureScot Owned Rural Land</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:NHS-UKHAB_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>NHS UKHab survey data</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:NVC_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>NVC Habitat Polygons and Survey Coverage</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:BRYORIV_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Oceanic Bryophytes Hydro Planning Database</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:WINDFARM_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Onshore Windfarm Proposals</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:PAPDCPT_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Peat depth and condition</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:PAPOA_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Project Officer Areas</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:RBS-EUNIS_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Raised Bogs EUNIS Scotland 2024</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:RAMSAR_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>RAMSAR Wetlands of International Importance</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:RPK_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Regional Parks</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:RIPWOOD_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Riparian Woodland</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class="layer-item" data-typename="eld:protectedareas_sac" data-attribution="naturescot-attribution">         
+          <span class="layer-name">SAC</span>
+          <button class="zoom-to-extent-btn" title="Zoom to extent">📍</button>
+          <button class="layer-details-btn" title="Layer details">ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:SMSS_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Saltmarsh Survey of Scotland</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:SDVSS_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Sand Dune Vegetation Survey of Scotland</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:WILDFIRE_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Scottish Wildfire and Muirburn Extents</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:SPA_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Special Protection Areas</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class="layer-item" data-typename="eld:protectedareas_sssi" data-attribution="naturescot-attribution">           
+          <span class="layer-name">SSSI</span>
+          <button class="zoom-to-extent-btn" title="Zoom to extent">📍</button>
+          <button class="layer-details-btn" title="Layer details">ℹ️</button>
+          </li>
+          <li class='layer-item' data-typename='eld:SWDB_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Standing Waters Database</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:HIA_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Upland Habitat Impact Assessment Surveys</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:WLA_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Wild Land Areas 2014</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:WPA_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>Wildcat Priority Areas</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:WHS_SCOTLAND' data-attribution='naturescot-attribution'>         
+          <span class='layer-name'>World Heritage Sites</span>
+          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+
+
+    </ul>
+
+    </div>
+
+    <div class="publisher" data-target="historic_england">
+        <div class="publisher-header">
+        <span class="toggle-icon">+</span>
+        Historic England
+        </div>
+        <ul class="layer-list" id="historic_england">
+
+
+
+          <li class='layer-item' data-typename='eld:aerial_investigation_mapping_area_detailed_mapping' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Aerial Investigation Mapping data (Detailed Mapping)</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:aerial_investigation_mapping_area_monument extents' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Aerial Investigation Mapping data (Mounment Extents)</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:aerial_investigation_mapping_area_project area' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Aerial Investigation Mapping data (Project Area)</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:battlefields_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Battlefields- part of National Heritage List for England</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:boundaries_historic_england_regions' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Boundaries - Historic England Regions</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:boundaries_HER_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Boundaries - Historic Environment Records in England</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:conservation_areas_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Conservation Areas</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:delisted_sites_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>De-designated sites</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:funding areas_haz' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Funding Areas - Heritage Action Zones</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:funding areas_hshaz' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Funding Areas - High Streets Heritage Action Zones</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:greater_london_archaeological_priority_areas' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Greater London Archaeological Priority Areas (APAs)</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:heritage_at_risk_register_2021_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Heritage at Risk Register 2021</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:heritage_at_risk_register_2022_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Heritage at Risk Register 2022</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:heritage_at_risk_register_2023_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Heritage at Risk Register 2023</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:heritage_at_risk_register_2024_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Heritage at Risk Register 2024</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:heritage_at_risk_register_2025_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Heritage at Risk Register 2025</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:research_spatial_reports' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Historic England Research Spatial Reports</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:listed_buildings_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Listed Buildings</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:management_agreements_for_field_monuments' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Management Agreements for Field Monuments</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:parks_and_gardens_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Parks and Gardens - part of National Heritage List for England</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:protected_wrecks_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Protected Wrecks - part of the National Heritage List for England</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:scheduled_monuments_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Scheduled Monuments - part of National Heritage List for England</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:turning_the_plough' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>Turning the Plough 2</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+          <li class='layer-item' data-typename='eld:world_heritage_sites_england' data-attribution='historic-england-attribution' >      
+          <span class='layer-name'>World Heritage Sites - part of the National Heritage List for England</span>
+          <button class ='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+        </li>
+
+
+
+        </ul>
+    </div>
+
+    <div class="publisher" data-target="historic_environment_scotland">
+        <div class="publisher-header">
+        <span class="toggle-icon">+</span>
+        Historic Environment Scotland
+        </div>
+        <ul class="layer-list" id="historic_environment_scotland">
+
+
+                        <li class='layer-item' data-typename='eld:listed_buildings_scotland' data-attribution='hes-attribution'>
+                          <span class='layer-name'>Listed Buildings</span>
+                          <button class='='zoom-to-extent-btn' title='Zoom to extent'>📍</button>
+                          <button class='layer-details-btn' title='Layer details'>ℹ️</button>
+                        </li>
+
+        </ul>
+    </div>
+
+    <div class="publisher" data-target="ordnance">
+        <div class="publisher-header">
+        <span class="toggle-icon">+</span>
+        Ordnance Survey
+        </div>
+        <ul class="layer-list" id="ordnance">
+        <li class="layer-item" data-typename="eld:boundaryline" data-attribution="ordnance-attribution">
+
+                        
+          <span class="layer-name">BoundaryLine</span>
+                        <!--
+              <button class="zoom-to-extent-btn" title="Zoom to extent">📍</button>
+              <button class="layer-details-btn" title="Layer details">ℹ️</button>
+                        -->
+        </li>
+        <!-- <li class="layer-item" data-typename="eld:os_topography">Topography</li> -->
+        </ul>
+    </div>
+
+    <div class="publisher" data-target="sepa">
+        <div class="publisher-header">
+        <span class="toggle-icon">+</span>
+        SEPA
+        </div>
+        <ul class="layer-list" id="sepa">
+        <li class="layer-item" data-typename="eld:sepa_water_bodies">Water Bodies</li>
+        <li class="layer-item" data-typename="eld:sepa_flood_risk">Flood Risk</li>
+        </ul>
+    </div>
+    </div>
+
+
+    <div id="map">
+      <select id="layerSelect" onchange="changemap(this.selectedIndex)"  title="change background layer" class="prevent-select"></select>
+
+      <div id="custom-attribution"  class="custom-attribution"></div>
+    </div>
+
+    <div id="search-panel" class="search-panel" style="display:none;">
+      <div class="search-panel-header">
+        <span class="search-panel-title">Search</span>
+        <button id="search-panel-close" class="search-panel-close" title="Close search">×</button>
+      </div>
+      <div class="search-panel-content" id="search-panel-content">
+        
+      <fieldset>
+				  <legend class="sr-only">Choose different ways of searching to locate the map</legend>
+				  <h3 style="z-index:14000; white-space: nowrap; padding:0;margin:0">
+					
+					  <legend class="sr-only">Choose between searching UK or World placenames</legend>
+					  <label id="nlsgazplacenames">Modern Placenames</label>
+					  <input
+						type="radio"
+						id="nlsgazareauk"
+						name="nlsgazarea"
+						title="United Kingdom places"
+						value="uk"
+						aria-labelledby="nlsgazareauk-label"
+						checked
+					  />
+					  <label id="nlsgazareauk-label" for="nlsgazareauk">UK</label>
+					  <input
+						type="radio"
+						id="nlsgazareaworld"
+						name="nlsgazarea"
+						title="World places"
+						value=""
+						aria-labelledby="nlsgazareaworld-label"
+					  />
+					  <label id="nlsgazareaworld-label" for="nlsgazareaworld">World</label>
+					</fieldset>				
+				  </h3>
+
+
+
+					<div role="combobox"  aria-expanded="false"  aria-haspopup="listbox" aria-owns="combobox-listbox" aria-controls="nlsgaz" aria-labelledby="nlsgazplacenames" >
+					  <!-- Accessible input field -->
+					  <label id="nlsgaz-label" for="nlsgaz" class="visually-hidden">
+						Enter a current placename (e.g., towns, farms, streets) to search for a location
+					  </label>
+					  <input
+						type="text"
+						autocomplete="off"
+						id="nlsgaz"
+						name="nlsgaz"
+						role="searchbox"
+						aria-autocomplete="list"
+						aria-describedby="search-description-nls tooltip-description-nls"
+						aria-expanded="false"
+						aria-controls="tooltip-description-nls"
+						onfocus="if(this.value == 'Type a modern placename...') { this.value = ''; }" onblur="this.value=!this.value?'Type a modern placename...':this.value;" value="Type a modern placename..."
+					  />
+					</div>
+
+
+					<!-- Description for assistive technologies -->
+					<p id="search-description-nls" class="visually-hidden">
+					  Enter a current placename (e.g., towns, farms, streets) to search for a location.
+					</p>
+
+<div id="ngrsearch">
+  <h3 style="z-index:14000;margin:10px 0 0 0">
+    <label for="ngrgaz">National Grid Ref., Lat,Lon or Postcode:</label>
+  </h3>
+
+  <div class="ngrsearch-row">
+    <input
+      type="search"
+      autocomplete="off"
+      id="ngrgaz"
+      onfocus="if(this.value == 'Type NGR, lat,lon or postcode...') { this.value = ''; }"
+      onblur="this.value=!this.value?'Type NGR, lat,lon or postcode...':this.value;javascript:document.getElementById('search-button-ngrgaz').style.color = '#706e6e';"
+      value="Type NGR, lat,lon or postcode..."
+      name="ngrgaz"
+      role="searchbox"
+      aria-describedby="search-description-ngr"
+      aria-controls="search-button-ngrgaz"
+    />
+
+    <button
+      id="search-button-ngrgaz"
+      type="button"
+      aria-label="Submit this postcode or Grid Reference"
+      aria-controls="ngrgaz"
+      onclick="javascript:postcodegaz(document.getElementById('ngrgaz').value)"
+    >
+      Submit
+    </button>
+  </div>
+
+  <p id="search-description-ngr" class="visually-hidden">
+    Enter a National Grid Reference, latitude/longitude, or postcode to search for a location
+  </p>
+</div>
+
+
+
+
+
+			
+			<div id="countysearch">
+				<h3><label for="county" id="search-county-label" style="margin:0 !important">Search County:</label> </h3>
+						<select id="county" name="county" aria-labelledby="search-county-label" aria-describedby="county-description"></select>
+					
+						<h3 id="parish_span"><label for="parish" id="search-parish-label" style="margin:0 !important">Parish:</label></h3> 
+
+					<select id="parish" name="parish" aria-labelledby="search-parish-label" aria-describedby="parish-description" class="hidden"></select>
+					<p id="parish-description" class="visually-hidden">Select a parish within the chosen county</p>
+
+            </div>
+
+
+
+			</fieldset>
+
+
+
+
+
+      </div>
+    </div>
+
+
+		<div id="layer-details-popup" class="layer-details-popup" style="display:none;">
+		  <div class="layer-details-header">
+		    <span id="layer-details-title"></span>
+		    <button id="layer-details-close" title="Close">×</button>
+		  </div>
+		  <div class="layer-details-content">
+		    <p><strong>Name:</strong> <span id="layer-details-name"></span></p>
+		    <p><strong>Title:</strong> <span id="layer-details-title-text"></span></p>
+		    <p><strong>Abstract:</strong></p>
+		    <p id="layer-details-abstract"></p>
+		    <p><strong>Year:</strong> <span id="layer-details-year"></span></p>
+		    <!-- <p><strong>Keywords:</strong> <span id="layer-details-keywords"></span></p> -->
+		  </div>
+		  <div class="layer-details-footer">
+		    <button id="layer-details-download" class="layer-details-download-btn">
+		      Download dataset
+		    </button>
+		  </div>
+		</div>
+
+
+
+  <script>
+
+    var DEFAULT_LAT = 56.0;
+    var DEFAULT_LON = -4.0;
+    var DEFAULT_ZOOM = 5;
+
+    var GPOpenLayers = false;
+
+    proj4.defs("EPSG:27700", "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +datum=OSGB36 +units=m +no_defs");
+
+    proj4.defs("EPSG:29902","+proj=tmerc +lat_0=53.5 +lon_0=-8 +k=1.000035 +x_0=200000 +y_0=250000 +a=6377340.189 +rf=299.3249646 +towgs84=482.5,-130.6,564.6,-1.042,-0.214,-0.631,8.15 +units=m +no_defs +type=crs");
+
+
+    ol.proj.proj4.register(proj4);
+
+
+    // updates the URL with the map zoom, lat and lon
+
+      function updateUrl()
+        {
+          var centre = ol.proj.transform(map.getView().getCenter(), "EPSG:3857", "EPSG:4326");
+
+          {
+          window.location.hash = "zoom=" + map.getView().getZoom().toFixed(1)  + "&lat=" + centre[1].toFixed(5)  + "&lon=" + centre[0].toFixed(5); 
+          }
+
+      }
+
+
+      function splitWindowLocationHash()
+      {
+        args = [];
+        var hash = window.location.hash;
+        if (hash.length > 0)
+        {
+          var elements = hash.split('&');
+          elements[0] = elements[0].substring(1); /* Remove the # */
+
+          for(var i = 0; i < elements.length; i++)
+          {
+            var pair = elements[i].split('=');
+            args[pair[0]] = pair[1];
+          }
+        }
+      }
+
+	splitWindowLocationHash();
+
+		var currentZoom = DEFAULT_ZOOM;
+		var currentLat = DEFAULT_LAT;
+		var currentLon = DEFAULT_LON;
+		if (args['zoom'])
+		{
+			currentZoom = args['zoom'];
+		}
+		if (args['lat'] && args['lon'])
+		{
+			currentLat = parseFloat(args['lat']); 
+			currentLon = parseFloat(args['lon']);		
+		}
+
+
+
+const geoserverBase = 'https://geoserver-ldl.nls.uk/geoserver/eld/wms';
+
+function makeLegendUrl(typename, width = 20, height = 20) {
+  console.log("makeLegendUrl running");
+  const params = new URLSearchParams({
+    REQUEST: 'GetLegendGraphic',
+    VERSION: '1.0.0',
+    FORMAT: 'image/png',
+    WIDTH: String(width),
+    HEIGHT: String(height),
+    STRICT: 'false',
+    style: typename
+  });
+
+  return `${geoserverBase}?${params.toString()}`;
+}
+
+
+
+    function showLegendForItem(item) {
+
+      console.log("showLegendForItem running");
+        // Avoid duplicate legend containers
+        if (item.querySelector('.layer-legend')) return;
+        const typename = item.dataset.typename;
+        const url = makeLegendUrl(typename, 20, 20);
+
+        console.log("url: " + url);
+
+        // Create container and image
+        const legendWrap = document.createElement('div');
+        legendWrap.className = 'layer-legend';
+        legendWrap.style.margin = '4px 0 0 24px'; // small indent to sit under name; adjust as needed
+
+
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = `${typename} legend`;
+        img.style.display = 'block';
+        img.style.maxWidth = '100px';
+        img.style.height = 'auto';
+        img.style.verticalAlign = 'middle';
+        img.style.display = 'inline-block';
+
+        // Optional: add caption with layer-name or title if desired
+        // const caption = document.createElement('span');
+        // caption.textContent = ' Legend';
+        // caption.style.marginLeft = '6px';
+
+        // Hide legend on load error (no broken image icon)
+        img.addEventListener('error', () => {
+        legendWrap.remove();
+        });
+
+
+
+
+        legendWrap.appendChild(img);
+        // Insert after the .layer-name span (or at end of li)
+        const nameSpan = item.querySelector('.layer-name');
+        const detailsBtn = item.querySelector('.layer-details-btn');
+
+        if (detailsBtn) {
+          detailsBtn.insertAdjacentElement('afterend', legendWrap);
+        } else if (nameSpan) {
+          nameSpan.insertAdjacentElement('afterend', legendWrap);
+        } else {
+          item.appendChild(legendWrap);
+        }
+  }
+
+  function hideLegendForItem(item) {
+    const existing = item.querySelector('.layer-legend');
+    if (existing) existing.remove();
+  }
+
+// From https://www.movable-type.co.uk/scripts/latlong-gridref.html NT261732
+    function gridrefNumToLet(e, n, digits) {
+        // get the 100km-grid indices
+        var e100k = Math.floor(e / 100000),
+        n100k = Math.floor(n / 100000);
+
+        if (e100k < 0 || e100k > 6 || n100k < 0 || n100k > 12) return '';
+
+        // translate those into numeric equivalents of the grid letters
+        var l1 = (19 - n100k) - (19 - n100k) % 5 + Math.floor((e100k + 10) / 5);
+        var l2 = (19 - n100k) * 5 % 25 + e100k % 5;
+
+        // compensate for skipped 'I' and build grid letter-pairs
+        if (l1 > 7) l1++;
+        if (l2 > 7) l2++;
+        var letPair = String.fromCharCode(l1 + 'A'.charCodeAt(0), l2 + 'A'.charCodeAt(0));
+
+        // strip 100km-grid indices from easting & northing, and reduce precision
+        e = Math.floor((e % 100000) / Math.pow(10, 5 - digits / 2));
+        n = Math.floor((n % 100000) / Math.pow(10, 5 - digits / 2));
+
+        Number.prototype.padLZ = function(w) {
+            var n = this.toString();
+            while (n.length < w) n = '0' + n;
+            return n;
+        }
+
+        var gridRef = letPair + " " + e.padLZ(digits / 2) + " " + n.padLZ(digits / 2);
+
+        return gridRef;
+    }
+	function gridrefLetToNum(gridref) {
+	  // get numeric values of letter references, mapping A->0, B->1, C->2, etc:
+	  var l1 = gridref.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+	  var l2 = gridref.toUpperCase().charCodeAt(1) - 'A'.charCodeAt(0);
+	  // shuffle down letters after 'I' since 'I' is not used in grid:
+	  if (l1 > 7) l1--;
+	  if (l2 > 7) l2--;
+
+	  // convert grid letters into 100km-square indexes from false origin (grid square SV):
+	  var e = ((l1-2)%5)*5 + (l2%5);
+	  var n = (19-Math.floor(l1/5)*5) - Math.floor(l2/5);
+
+	  // skip grid letters to get numeric part of ref, stripping any spaces:
+	  gridref = gridref.slice(2).replace(/ /g,'');
+
+	  // append numeric part of references to grid index:
+	  e += gridref.slice(0, gridref.length/2);
+	  n += gridref.slice(gridref.length/2);
+
+	  // normalise to 1m grid, rounding up to centre of grid square:
+	  switch (gridref.length) {
+		case 2: e += '5000'; n += '5000'; break;
+	    case 4: e += '500'; n += '500'; break;
+	    case 6: e += '50'; n += '50'; break;
+	    case 8: e += '5'; n += '5'; break;
+	    // 10-digit refs are already 1m
+	  }
+
+	  return [e, n];
+	}
+
+
+
+// WGS84 to Irish Grid Reference (simplified, for educational use)
+// For production, use a geodesy library that supports the Irish Grid
+
+	function degToRad(degrees) {
+	    return degrees * Math.PI / 180;
+	}
+	
+	// Airy Modified 1849 ellipsoid parameters (Irish Grid)
+	// const a = 6377340.189; // semi-major axis
+	// const b = 6356034.447; // semi-minor axis
+	// const f0 = 1.000035; // scale factor on central meridian
+	const lat0 = degToRad(53.5); // True origin latitude (53°30'N)
+	const lon0 = degToRad(-8); // True origin longitude (8°W)
+	const N0 = 250000; // Northing of true origin (m)
+	const E0 = 200000; // Easting of true origin (m)
+	const e2 = (6377340.189*6377340.189 - 6356034.447 *6356034.447) / (6377340.189*6377340.189); // eccentricity squared
+	
+	function latLonToIrishGrid(lat, lon) {
+	    // Convert input degrees to radians
+	    lat = degToRad(lat);
+	    lon = degToRad(lon);
+	
+	    // Helmert transform parameters from WGS84 to Irish Grid datum
+	    // (for high accuracy, a full Helmert transform is needed; this is simplified)
+	    // For production, use a geodesy library for the full transform
+	
+	    // Compute nu, rho, eta2
+	    const sinLat = Math.sin(lat);
+	    const cosLat = Math.cos(lat);
+	    const nu = 6377340.189* 1.000035/ Math.sqrt(1 - e2 * sinLat * sinLat);
+	    const rho = 6377340.189 * 1.000035* (1 - e2) / Math.pow(1 - e2 * sinLat * sinLat, 1.5);
+	    const eta2 = nu / rho - 1;
+	
+	    // Compute meridional arc
+	    const M = computeM(lat, lat0);
+	
+	    const dLon = lon - lon0;
+	    const tanLat = Math.tan(lat);
+	    const secLat = 1 / cosLat;
+	
+	    // Calculate Easting (E) and Northing (N)
+	    const I = M + N0;
+	    const II = (nu / 2) * sinLat * cosLat;
+	    const III = (nu / 24) * sinLat * Math.pow(cosLat, 3) * (5 - tanLat * tanLat + 9 * eta2);
+	    const IV = nu * cosLat;
+	    const V = (nu / 6) * Math.pow(cosLat, 3) * (nu / rho - tanLat * tanLat);
+	    const VI = (nu / 120) * sinLat * Math.pow(cosLat, 5) * (61 - 58 * tanLat * tanLat + Math.pow(tanLat, 4));
+	
+	    const N = I + II * dLon * dLon + III * Math.pow(dLon, 4);
+	    const E = E0 + IV * dLon + V * Math.pow(dLon, 3) + VI * Math.pow(dLon, 5);
+	
+	    return {E: Math.round(E), N: Math.round(N)};
+	}
+	
+	function computeM(lat, lat0) {
+	    // Meridional arc calculation for Airy Modified 1849 ellipsoid
+	    const n = (6377340.189 - 6356034.447) / (6377340.189 + 6356034.447);
+	    const n2 = n * n;
+	    const n3 = n2 * n;
+	
+	    return 6356034.447* 1.000035* (
+	        (1 + n + (5/4)*n2 + (5/4)*n3) * (lat - lat0)
+	        - (3*n + 3*n2 + (21/8)*n3) * Math.sin(lat - lat0) * Math.cos(lat + lat0)
+	        + ((15/8)*n2 + (15/8)*n3) * Math.sin(2*(lat - lat0)) * Math.cos(2*(lat + lat0))
+	        - (35/24)*n3 * Math.sin(3*(lat - lat0)) * Math.cos(3*(lat + lat0))
+	    );
+	}
+	
+	// Example usage:
+	
+	/*
+	const lat = 54.6; // Latitude in decimal degrees
+	const lon = -5.9; // Longitude in decimal degrees
+	const grid = latLonToIrishGrid(lat, lon);
+	console.log(`Easting: ${grid.E}, Northing: ${grid.N}`);
+	*/
+	
+	function irishGridRef(easting, northing, digits) {
+	    // Irish grid letters (excluding I)
+	    var letters = 'ABCDEFGHJKLMNOPQRSTUVWXYZ';
+	    // The Irish grid origin is at (0,0), so no offset needed
+	    var e100k = Math.floor(easting / 100000);
+	    var n100k = Math.floor(northing / 100000);
+	
+	    // Irish grid is 5x5 squares, skipping 'I'
+	    var letterIndex = (4 - n100k) * 5 + e100k;
+	 //   if (letterIndex > 8) letterIndex++; // skip 'I'
+	    var letter = letters[letterIndex];
+	
+	    // Get easting/northing within the 100km square
+	    var eWithin = easting % 100000;
+	    var nWithin = northing % 100000;
+	
+	    // Pad to required digits (default 5 each for 10-digit ref)
+	    var eStr = String(Math.floor(eWithin / Math.pow(8, 4 - digits/2))).padStart(digits/2, '0');
+	    var nStr = String(Math.floor(nWithin / Math.pow(8, 4 - digits/2))).padStart(digits/2, '0');
+	
+	    return letter + ' '+ eStr + ' ' + nStr;
+	}
+	
+	// Example usage:
+	// var gridRef = irishGridRef(316102, 234569, 8); // "O1610234569"
+
+	// OpenStreetMap
+	var osm = new ol.layer.Tile({
+                 // preload: Infinity,,
+	         title: 'Background - OpenStreetMap',
+	         mosaic_id: 'osm',
+	              source: new ol.source.OSM({
+	              // attributions: [ol.source.OSM.DATA_ATTRIBUTION],
+	              url: 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+				  tilePixelRatio: 1,
+				  crossOrigin: 'anonymous'
+	          })/*,
+	      opacity: 0.7*/
+	});
+
+
+	var esri_world_imagery = new ol.layer.Tile({
+		// preload: Infinity,,
+		title: 'Background - ESRI World Image',
+	        mosaic_id: 'ESRIWorld',
+		type: 'base', 
+		    source: new ol.source.XYZ({
+			          attributions: 'Tiles &copy; <a href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer">ArcGIS</a>. ',
+
+			              url: 'https://server.arcgisonline.com/ArcGIS/rest/services/' +
+			                  'World_Imagery/MapServer/tile/{z}/{y}/{x}',
+					tilePixelRatio: 1,
+					tileSize: 256,
+					crossOrigin: 'anonymous'
+	      	}),
+		maxZ: 18
+	    });
+
+	var esri_world_topo = new ol.layer.Tile({
+		// preload: Infinity,,
+		title: 'Background - ESRI World Topo',
+	        mosaic_id: 'ESRITopo',
+		type: 'base', 
+		    source: new ol.source.XYZ({
+		          attributions: 'Tiles &copy; <a href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer">ArcGIS</a>. ',
+
+			              url: 'https://server.arcgisonline.com/ArcGIS/rest/services/' +
+			                  'World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+					tilePixelRatio: 1,
+					tileSize: 256,
+					crossOrigin: 'anonymous'
+	      	})
+	    });
+
+
+	var OSMapsAPI = new ol.layer.Tile({
+		      // preload: Infinity,,
+	              title: 'Background - OS Maps API',
+	              mosaic_id: 'OSAPI',
+	              type: 'base',
+    			visible: false,	
+		      source: new ol.source.XYZ({
+				    attributions: 'Contains OS data © Crown copyright and database right 2026',
+
+				    url: 'https://api.os.uk/maps/raster/v1/zxy/Outdoor_3857/{z}/{x}/{y}.png?key=' + 'Rt69sv62Dv1JNAvlJAcM0upXIaIcpua8',
+				    minZoom: 7,
+					tilePixelRatio: 1,
+					crossOrigin: 'anonymous'
+				  })
+	           });
+
+	var OSOpendata = new ol.layer.Tile({
+	              title: 'Background - OS Opendata',
+	              mosaic_id: 'Opendata',
+	              type: 'base',
+		      source: new ol.source.XYZ({
+				    attributions:'<a href="https://www.ordnancesurvey.co.uk/oswebsite/opendata/">Ordnance Survey OpenData</a>. Contains OS data © Crown copyright and database right (2010)',
+
+				    url: 'https://mapseries-tilesets.s3.amazonaws.com/opendata/{z}/{x}/{y}.png',
+				    // minZoom: 10,
+				    maxZoom: 17,
+				    tilePixelRatio: 1,
+					crossOrigin: 'anonymous'
+				  })
+	        });
+
+
+
+	var OSMapsLeisure = new ol.layer.Tile({
+		title: 'Background - OS Maps Leisure (1:50,000/1:25,000)',
+		mosaic_id: 'OSLeisure'
+			});
+	
+	const parser = new ol.format.WMTSCapabilities();
+	
+		fetch('https://api.os.uk/maps/raster/v1/wmts?key=Q9ESJToD1he64kb6Aacq2Wqjy2EMhkUY&service=WMTS&request=GetCapabilities&version=2.0.0')
+		  .then(function (response) {
+			return response.text();
+		  })
+		  .then(function (text) {
+			const result = parser.read(text);
+			const options = ol.source.WMTS.optionsFromCapabilities(result, {
+                layer: 'Leisure_27700',
+                matrixSet: 'EPSG:27700',
+				maxZoom: 9,
+
+			});
+			options.crossOrigin = '';
+			options.projection = 'EPSG:27700';
+			options.attributions = 'Contains OS data © Crown copyright and database right 2026'
+			options.wrapX = false;
+			OSMapsLeisure.setSource(new ol.source.WMTS(options));
+		  });
+
+		const startResolution = ol.extent.getWidth([ -238375.0, 0.0, 900000.0, 1376256.0 ]) / 256;
+		const resolutions = new Array(22);
+		for (let i = 0, ii = resolutions.length; i < ii; ++i) {
+		  resolutions[i] = startResolution / Math.pow(2, i);
+		}
+
+
+
+
+	var OSMapsAPI = new ol.layer.Tile({
+		      // preload: Infinity,,
+	              title: 'Background - OS Maps API',
+	              mosaic_id: 'OSAPI',
+	              type: 'base',
+		      source: new ol.source.XYZ({
+				    attributions: 'Contains OS data © Crown copyright and database right 2021',
+
+			    url: 'https://api.os.uk/maps/raster/v1/zxy/Outdoor_3857/{z}/{x}/{y}.png?key=' + 'Rt69sv62Dv1JNAvlJAcM0upXIaIcpua8',
+//					url: 'https://api.os.uk/maps/raster/v1/zxy/Leisure_3857/{z}/{x}/{y}.png?key=Q9ESJToD1he64kb6Aacq2Wqjy2EMhkUY',
+				    minZoom: 7,
+					tilePixelRatio: 1,
+					crossOrigin: 'anonymous'
+				  })
+	    });
+
+
+
+	var blank_layer = new ol.layer.Vector({
+		  mosaic_id: '22',
+		  title: "Background - Blank Layer",
+		  source: new ol.source.Vector(),
+		  style: new ol.style.Style({}),
+	      });
+
+	var baseLayers = [ osm, esri_world_imagery, esri_world_topo, OSMapsLeisure, OSMapsAPI, OSOpendata, blank_layer];
+
+// sets up the base layers as a drop-down list
+
+	    var layerSelect = document.getElementById('layerSelect');
+	    for (var x = 0; x < baseLayers.length; x++) {
+	        // if (!baseLayers[x].displayInLayerSwitcher) continue;
+	        var option = document.createElement('option');
+		option.appendChild(document.createTextNode(baseLayers[x].get('title')));
+	        option.setAttribute('value', x);
+	        option.setAttribute('id', 'baseOption' + baseLayers[x].get('title'));
+	        layerSelect.appendChild(option);
+	    }
+
+// Change base layer
+
+	var changemap = function(index) {
+	  map.getLayers().getArray()[0].setVisible(false);
+	  map.getLayers().removeAt(0);
+	  map.getLayers().insertAt(0,baseLayers[index]);
+	  map.getLayers().getArray()[0].setVisible(true);
+	}
+
+function updateCustomAttribution() {
+  const el = document.getElementById('custom-attribution');
+  if (!el) return;
+
+  const activeAttributions = new Set();
+
+  activeAttributions.add(osmAttribution);
+
+  layerManager.activeLayers.forEach(layer => {
+    const source = layer.getSource();
+    if (!source) return;
+
+    const attrs = source.getAttributions?.();
+    if (typeof attrs === 'function') {
+      const result = attrs();
+      if (Array.isArray(result)) {
+        result.forEach(a => a && activeAttributions.add(a));
+      } else if (result) {
+        activeAttributions.add(result);
+      }
+    }
+  });
+
+  el.innerHTML = [...activeAttributions].join(' &nbsp;|&nbsp; ');
+}
+
+let currentDetailsTypename = null; // NatureScot typename, e.g. 'protectedareas:biogen'
+
+function showLayerDetails(name) {
+  const meta = wfsLayerMetadata[name];
+  if (!meta) {
+    alert('No metadata found for ' + name + ' (is it a NatureScot protectedareas layer?)');
+    return;
+  }
+
+  currentDetailsTypename = name; // store 'protectedareas:biogen'
+
+  document.getElementById('layer-details-name').textContent = meta.name;
+  document.getElementById('layer-details-title').textContent = meta.title || meta.name;
+  document.getElementById('layer-details-title-text').textContent = meta.title || '';
+  document.getElementById('layer-details-abstract').textContent = meta.abstract || '(no abstract provided)';
+  document.getElementById('layer-details-year').textContent = meta.year || '';
+
+  document.getElementById('layer-details-popup').style.display = 'block';
+}
+
+
+
+document.getElementById('layer-details-close').addEventListener('click', () => {
+  document.getElementById('layer-details-popup').style.display = 'none';
+});
+
+const osmAttribution =   '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>';
+
+// Attribution definitions
+    const attributions = {
+    'naturescot-attribution': 'Contains NatureScot data © NatureScot 2025 <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" style="color: #205081;" target="_blank">OGL v3.0</a>',
+    'historic-england-attribution': '© Historic England 2026, Contains Ordnance Survey data © Crown copyright and database right 2026.',
+    'hes-attribution': 'Contains Historic Environment Scotland and Ordnance Survey data © Historic Environment Scotland - Scottish Charity No. SC045925 © Crown copyright and database right 2026',
+    'ordnance-attribution': 'Contains Ordnance Survey data © Crown copyright and database right 2026',
+    'sepa-attribution': 'Contains SEPA data © Scottish Environment Protection Agency 2026'
+    };
+
+// Layer management object (unchanged)
+
+    const layerManager = {
+    activeLayers: new Map(),
+    
+    createLayer(typename, attributionKey) {
+    const attributionHtml = attributions[attributionKey];
+    
+    return new ol.layer.Tile({
+        source: new ol.source.XYZ({
+        url: `https://geoserver-ldl.nls.uk/geoserver/gwc/service/gmaps?layers=${typename}&zoom={z}&x={x}&y={y}&format=image/png`,
+        crossOrigin: 'anonymous',
+        attributions: attributionHtml ? [attributionHtml] : []  // Array of HTML strings
+        }),
+        opacity: 0.8,
+    });
+    },
+
+
+
+
+    toggleLayer(typename, attributionKey) {
+      const map = window.map;
+
+      if (this.activeLayers.has(typename)) {
+        const layer = this.activeLayers.get(typename);
+        map.removeLayer(layer);
+        this.activeLayers.delete(typename);
+      } else {
+        const layer = this.createLayer(typename, attributionKey);
+        map.addLayer(layer);
+        this.activeLayers.set(typename, layer);
+      }
+
+      updateCustomAttribution();
+    }
+
+};
+
+document.getElementById('custom-attribution').innerHTML = osmAttribution;
+
+
+document.getElementById('layer-details-download').addEventListener('click', () => {
+  if (!currentDetailsTypename) {
+    alert('No dataset selected for download.');
+    return;
+  }
+
+/*
+  // NatureScot typename: 'protectedareas:biogen'
+  const parts = currentDetailsTypename.split(':');
+  if (parts.length !== 2) {
+    alert('Unexpected typename format: ' + currentDetailsTypename);
+    return;
+  }
+
+  const ns = parts[0];       // 'protectedareas'
+  const localName = parts[1]; // 'biogen'
+
+*/
+
+  // Build local download folder and filename: protectedareas_biogen/protectedareas_biogen.zip
+  // const baseName = ns + '_' + localName; // 'protectedareas_biogen'
+  const downloadPath = 'https://maps.nls.uk/eld/downloads/' + currentDetailsTypename + '/' + currentDetailsTypename + '.zip';
+
+  console.log("downloadPath: " + downloadPath);
+
+  // Trigger download via a temporary <a> element
+  const a = document.createElement('a');
+  a.href = downloadPath;        // must be same-origin URL[web:195][web:200]
+  a.download = currentDetailsTypename + '.zip';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+});
+
+
+
+// WFS Manager (COMPLETELY SIMPLIFIED - NO BBOX)
+const wfsManager = {
+  popup: null,
+  
+  init(map) {
+    this.map = map;
+    this.createPopup();
+    
+    map.on('singleclick', (evt) => {
+
+      console.log("singleclick");
+      this.queryLayersAtPoint(evt.coordinate);
+    });
+  },
+  
+
+   createPopup() {
+    const popupElement = document.createElement('div');
+    popupElement.className = 'ol-popup';
+    popupElement.innerHTML = `
+        <button class="ol-popup-close" title="Close">&times;</button>
+        <div id="popup-content">Loading...</div>
+    `;
+    
+    // Close button event handler
+    popupElement.querySelector('.ol-popup-close').onclick = () => {
+
+        this.hidePopup();
+    };
+    
+    this.popup = new ol.Overlay({
+        element: popupElement,
+        positioning: 'bottom-center',
+        stopEvent: true,
+        offset: [0, -10]
+    });
+    this.map.addOverlay(this.popup);
+    },
+
+
+  
+  queryLayersAtPoint(coordinate) {
+    console.log("queryLayersAtPont running");
+    const activeTypenames = Array.from(layerManager.activeLayers.keys());
+    if (activeTypenames.length === 0) {
+      this.hidePopup();
+      return;
+    }
+    
+    let allFeatures = [];
+    
+    const promises = activeTypenames.map(typename => 
+      this.queryWFS(typename, coordinate).catch(() => [])
+    );
+    
+    Promise.all(promises).then(results => {
+      results.forEach(features => allFeatures = allFeatures.concat(features));
+      
+      if (allFeatures.length > 0) {
+        this.showPopup(coordinate, allFeatures);
+      } else {
+        this.hidePopup();
+      }
+    });
+  },
+  
+queryWFS(typename, point) {
+
+  console.log("queryWFS running");
+  // Convert to lon/lat and create small bbox (~100m)
+  const lonLat = ol.proj.toLonLat(point);
+  const buffer = 0.001; // degrees (~100m)
+  const bbox = `${lonLat[0]-buffer},${lonLat[1]-buffer},${lonLat[0]+buffer},${lonLat[1]+buffer}`;
+
+  if (typename === 'eld:boundaryline') { typename = 'eld:boundary_line_ceremonial_counties,eld:district_borough_unitary'; }
+  const layerName = typename;
+  
+  // Simple bbox query - NO FILTER XML
+  const wfsUrl = `https://geoserver-ldl.nls.uk/geoserver/wfs?service=WFS&version=1.0.0&request=GetFeature&typeName=${layerName}&maxFeatures=10&bbox=${bbox},EPSG:4326&outputFormat=application/json&srsName=EPSG:4326`;
+  
+  return fetch(wfsUrl)
+    .then(response => response.json())
+    .then(json => {
+      const geojsonFormat = new ol.format.GeoJSON();
+      const features = geojsonFormat.readFeatures(json);
+      console.log(`Found ${features.length} features for ${layerName}`);
+      return features;
+    })
+    .catch(error => {
+      console.warn(`Query failed for ${layerName}:`, error);
+      return [];
+    });
+},
+
+
+  
+  showPopup(coordinate, features) {
+    let content = '<div style="max-height: 300px; overflow-y: auto;">';
+    
+    features.forEach((feature, index) => {
+      const properties = feature.getProperties();
+      const layerName = Object.keys(properties).find(key => key.match(/name|title/i)) || 'Feature';
+      
+      content += `<h4 style="margin: 10px 0 5px 0; border-bottom: 1px solid #ccc;">${layerName}</h4>`;
+      
+      Object.entries(properties).forEach(([key, value]) => {
+        if (typeof value === 'string' && value.trim().length > 0 && !key.toLowerCase().includes('geom')) {
+          content += `<div style="margin: 2px 0;"><strong>${key}:</strong> ${value}</div>`;
+        }
+      });
+      
+      if (index < features.length - 1) {
+        content += '<hr style="margin: 10px 0;">';
+      }
+    });
+    
+    content += '</div>';
+    
+    document.getElementById('popup-content').innerHTML = content;
+    this.popup.setPosition(coordinate);
+  },
+  
+  hidePopup() {
+    this.popup.setPosition(undefined);
+  }
+};
+
+    // Accordion and layer selection 
+
+document.querySelectorAll('.publisher').forEach(publisher => {
+  publisher.querySelector('.publisher-header').addEventListener('click', () => {
+    const targetId = publisher.dataset.target;
+    const layerList = document.getElementById(targetId);
+    const icon = publisher.querySelector('.toggle-icon');
+    const isExpanded = layerList.classList.contains('expanded');
+    const hasSelection = publisher.classList.contains('has-selection');
+
+    document.querySelectorAll('.layer-list').forEach(list => {
+      if (list !== layerList) {
+        const otherPublisher = list.closest('.publisher');
+        const otherHasSelection = otherPublisher && otherPublisher.classList.contains('has-selection');
+
+        if (!otherHasSelection) {
+          list.classList.remove('expanded');
+          list.previousElementSibling.querySelector('.toggle-icon').textContent = '+';
+          list.previousElementSibling.querySelector('.toggle-icon').classList.remove('expanded');
+        }
+      }
+    });
+
+    if (isExpanded) {
+      if (!hasSelection) {
+        layerList.classList.remove('expanded');
+        icon.textContent = '+';
+        icon.classList.remove('expanded');
+      }
+    } else {
+      layerList.classList.add('expanded');
+      icon.textContent = '−';
+      icon.classList.add('expanded');
+    }
+  });
+});
+
+
+// Enhanced layer selection + zoom handlers
+
+
+document.querySelectorAll('.layer-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const publisher = item.closest('.publisher');
+    if (publisher) {
+      publisher.classList.add('has-selection');
+    }
+  });
+});
+
+
+
+document.querySelectorAll('.layer-item').forEach(item => {
+  // Toggle layer on item click
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('.zoom-to-extent-btn') ||
+          e.target.classList.contains('.layer-details-btn')) return;
+      
+      e.stopPropagation();
+      const typename = item.dataset.typename;
+      const attributionKey = item.dataset.attribution;
+      layerManager.toggleLayer(typename, attributionKey);
+
+      const nowSelected = item.classList.toggle('selected');
+      if (nowSelected) {
+        showLegendForItem(item);
+        } else {
+        hideLegendForItem(item);
+      }
+    })
+  
+  
+
+  // Zoom to extent
+  const zoomBtn = item.querySelector('.zoom-to-extent-btn');
+  if (zoomBtn) {
+    zoomBtn.addEventListener('click', (e) => {
+
+      console.log("zoom to extent");
+
+      e.stopPropagation();
+      const typename = item.dataset.typename;
+      if (Object.keys(layerExtents).length === 0) {
+        loadLayerExtentsFromWMS();
+        setTimeout(() => zoomToLayer(typename), 1000);
+      } else {
+        zoomToLayer(typename);
+      }
+    });
+  }
+
+// Details button - CORRECTED eld:protectedareas_biogen → protectedareas:biogen
+const detailsBtn = item.querySelector('.layer-details-btn');
+if (detailsBtn) {
+  detailsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const fullTypename = item.dataset.typename; // e.g. 'eld:protectedareas_biogen'
+    
+    // Transform: eld:protectedareas_biogen → protectedareas:biogen
+    const natureScotLayerName = fullTypename
+      .replace(/^eld:/, '')  // Remove 'eld:'
+    //  .replace(/^protectedareas_/, 'protectedareas:');  // protectedareas_biogen → protectedareas:biogen
+    
+    showLayerDetails(natureScotLayerName); // Looks up 'protectedareas:biogen'
+  });
+}
+
+
+});
+
+
+const attributionControl = new ol.control.Attribution({
+  collapsible: false,
+  target: document.getElementById('custom-attribution'),
+  className: 'custom-attribution'
+});
+
+
+
+window.map = new ol.Map({
+  target: 'map',
+//  controls: ol.control.defaults({attribution: false, rotate: false,zoom: true}).extend([attributionControl]),
+  layers: [
+    new ol.layer.Tile({
+      source: new ol.source.OSM({
+ //       attributions: '© OpenStreetMap contributors'
+      })
+    })
+  ],
+  view: new ol.View({
+		  center: ol.proj.transform([currentLon, currentLat], 'EPSG:4326', 'EPSG:3857'),
+      zoom: currentZoom
+  }),
+
+
+});
+
+map.on('moveend', updateUrl);
+
+wfsManager.init(window.map);
+
+
+// === COMPLETE MEASURE TOOLBAR + TOOLTIP CODE ===
+
+// 1. Create buttons FIRST
+const measureControls = {
+  azimuthBtn: document.createElement('button'),
+  lengthBtn: document.createElement('button'),
+  areaBtn: document.createElement('button'),
+  clearBtn: document.createElement('button')
+};
+
+measureControls.azimuthBtn.innerHTML = '↗';
+measureControls.lengthBtn.innerHTML = '📏';
+measureControls.areaBtn.innerHTML = '📐';
+measureControls.clearBtn.innerHTML = '✕';
+
+measureControls.azimuthBtn.innerHTML = '↗';
+measureControls.azimuthBtn.title = 'Measure azimuth';
+
+measureControls.lengthBtn.innerHTML = '📏';
+measureControls.lengthBtn.title = 'Measure length';
+
+measureControls.areaBtn.innerHTML = '📐';
+measureControls.areaBtn.title = 'Measure area';
+
+measureControls.clearBtn.innerHTML = '✕';
+measureControls.clearBtn.title = 'Clear measurements';
+
+// 2. Custom toolbar control
+class MeasureToolbar extends ol.control.Control {
+  constructor() {
+    const element = document.createElement('div');
+    element.className = 'ol-unselectable ol-control measure-toolbar';
+    element.appendChild(measureControls.azimuthBtn);
+    element.appendChild(measureControls.lengthBtn);
+    element.appendChild(measureControls.areaBtn);
+    element.appendChild(measureControls.clearBtn);
+    super({element});
+  }
+}
+
+const measureToolbar = new MeasureToolbar();
+window.map.addControl(measureToolbar);
+
+// 3. Measure layer
+const measureSource = new ol.source.Vector();
+const measureLayer = new ol.layer.Vector({
+  source: measureSource,
+  zIndex: 1000,
+  style: new ol.style.Style({
+    fill: new ol.style.Fill({color: 'rgba(255,255,255,0.2)'}),
+    stroke: new ol.style.Stroke({color: '#ffcc33', width: 2}),
+    image: new ol.style.Circle({radius: 5, fill: new ol.style.Fill({color: '#ffcc33'})})
+  })
+});
+window.map.addLayer(measureLayer);
+
+// 4. Measure variables
+let measureTooltipElement;
+let measureTooltip;
+let sketch;
+let currentMeasureType = null;
+window.draw = null;  // Global draw reference
+
+// 5. Formatters
+
+// Length: meters → feet/miles
+const formatLength = (line) => {
+  const length = ol.sphere.getLength(line); // meters
+
+  // Metric
+  let metric;
+  if (length > 1000) {
+    metric = (length / 1000).toFixed(2) + ' km';
+  } else {
+    metric = length.toFixed(1) + ' m';
+  }
+
+  // Imperial
+  const feetPerMeter = 3.280839895;
+  const milesPerMeter = 0.000621371192;
+  let imperial;
+
+  if (length * milesPerMeter >= 0.1) {
+    // Use miles for longer distances
+    imperial = (length * milesPerMeter).toFixed(2) + ' mi';
+  } else {
+    imperial = (length * feetPerMeter).toFixed(0) + ' ft';
+  }
+
+  return metric + ' / ' + imperial;
+};
+
+// Area: m² → ft² / acres
+const formatArea = (polygon) => {
+  const area = ol.sphere.getArea(polygon); // m²
+
+  // Metric
+  let metric;
+  if (area > 1000000) {
+    metric = (area / 1000000).toFixed(2) + ' km²';
+  } else {
+    metric = area.toFixed(0) + ' m²';
+  }
+
+  // Imperial
+  const sqftPerSqm = 10.76391041671;
+  const acresPerSqm = 0.000247105381;
+  let imperial;
+
+  if (area * acresPerSqm >= 0.1) {
+    // Use acres for larger areas
+    imperial = (area * acresPerSqm).toFixed(2) + ' acres';
+  } else {
+    imperial = (area * sqftPerSqm).toFixed(0) + ' ft²';
+  }
+
+  return metric + ' / ' + imperial;
+};
+
+
+
+const formatAzimuth = (coords) => {
+  if (coords.length < 2) return 'Click second point';
+  const bearing = ol.sphere.computeHeading(...coords);
+  return bearing.toFixed(1) + '°';
+};
+
+// 6. Tooltip functions
+function createMeasureTooltip() {
+  if (measureTooltipElement) {
+    measureTooltipElement.parentNode.removeChild(measureTooltipElement);
+  }
+  measureTooltipElement = document.createElement('div');
+  measureTooltipElement.className = 'measure-tooltip';
+  measureTooltipElement.innerHTML = 'Click to start drawing...';
+  measureTooltip = new ol.Overlay({
+    element: measureTooltipElement,
+    offset: [0, -15],
+    positioning: 'bottom-center'
+  });
+  window.map.addOverlay(measureTooltip);
+}
+
+function startMeasure(type) {
+  // Clear previous
+  if (window.draw) window.map.removeInteraction(window.draw);
+  if (measureTooltip) window.map.removeOverlay(measureTooltip);
+  measureSource.clear();
+  
+  currentMeasureType = type;
+  createMeasureTooltip();
+  
+  window.draw = new ol.interaction.Draw({
+    source: measureSource,
+    type: type === 'azimuth' ? 'LineString' : type,
+    maxPoints: type === 'azimuth' ? 2 : undefined
+  });
+  
+  window.map.addInteraction(window.draw);
+  
+  window.draw.on('drawstart', (evt) => {
+    sketch = evt.feature;
+    const geom = sketch.getGeometry();
+    
+    const updateTooltip = () => {
+      const geometry = sketch.getGeometry();
+      let output, tooltipCoord;
+      
+      if (geometry instanceof ol.geom.LineString) {
+        if (currentMeasureType === 'azimuth') {
+          output = formatAzimuth(geometry.getCoordinates());
+        } else {
+          output = formatLength(geometry);
+        }
+        tooltipCoord = geometry.getLastCoordinate();
+      } else if (geometry instanceof ol.geom.Polygon) {
+        output = formatArea(geometry);
+        tooltipCoord = geometry.getInteriorPoint().getCoordinates();
+      }
+      
+      measureTooltipElement.innerHTML = output;
+      measureTooltip.setPosition(tooltipCoord);
+    };
+    
+    sketch.tooltipListener = geom.on('change', updateTooltip);
+  });
+  
+  window.draw.on('drawend', () => {
+    if (sketch && sketch.tooltipListener) {
+      ol.Observable.unByKey(sketch.tooltipListener);
+    }
+    measureTooltipElement.className = 'measure-tooltip measure-tooltip-static';
+    measureTooltipElement.innerHTML += '<br><small>Click to restart</small>';
+  });
+}
+
+// 7. Button handlers
+measureControls.azimuthBtn.onclick = () => startMeasure('azimuth');
+measureControls.lengthBtn.onclick = () => startMeasure('LineString');
+measureControls.areaBtn.onclick = () => startMeasure('Polygon');
+measureControls.clearBtn.onclick = () => {
+  measureSource.clear();
+  if (window.draw) window.map.removeInteraction(window.draw);
+  if (measureTooltip) window.map.removeOverlay(measureTooltip);
+};
+
+
+    var mouseposition = new ol.control.MousePosition({
+            projection: 'EPSG:4326',
+            coordinateFormat: function(coordinate) {
+	    // BNG: ol.extent.applyTransform([x, y], ol.proj.getTransform("EPSG:4326", "EPSG:27700"), 
+
+
+		var coord27700 = ol.proj.transform(coordinate, 'EPSG:4326', 'EPSG:27700');
+		var templatex = '{x}';
+		var outx = ol.coordinate.format(coord27700, templatex, 0);
+		var templatey = '{y}';
+		var outy = ol.coordinate.format(coord27700, templatey, 0);
+		NGR = gridrefNumToLet(outx, outy, 10);
+		var coord29902 = ol.proj.transform(coordinate, 'EPSG:4326', 'EPSG:29902');
+		var irishgrid = latLonToIrishGrid(coordinate[0], coordinate[1]);
+		var irishgridref = irishGridRef(Math.round(coord29902[0]), Math.round(coord29902[1]), 8);
+		var hdms = ol.coordinate.toStringHDMS(coordinate);
+		
+
+		if ((coordinate[0] > -10.56)  && (coordinate[0] < -5.34) && (coordinate[1] > 51.39)  && (coordinate[1] < 55.43))
+		
+			{
+			
+			if ((coordinate[0] > -5.90)  && (coordinate[0] < -5.34) && (coordinate[1] > 55.22)  && (coordinate[1] < 55.43))
+			
+				{
+				return '<strong>' + NGR + '</strong>&nbsp; <br/>' + ol.coordinate.format(coord27700, '{x}, {y}', 0) + 
+				'&nbsp; <br/>' + ol.coordinate.format(coordinate, '{y}, {x}', 5) + '&nbsp; <br/>&nbsp;' + hdms + ' &nbsp;'; 
+				}
+				else
+				{
+				return '<strong>' +  irishgridref + '</strong>  &nbsp;<br/>'  +  Math.round(coord29902[0]) + ', ' + Math.round(coord29902[1]) + ' &nbsp;</br/>' +
+					 ol.coordinate.format(coordinate, '{y}, {x}', 5) + '&nbsp; <br/>&nbsp;' + hdms + '&nbsp;'; 	
+				}
+			}
+		if ((outx  < 0) || (outx > 700000 ) || (outy < 0) || (outy > 1300000 )) {
+
+			{
+		        return '<strong>' + ol.coordinate.format(coordinate, '{y}, {x}', 5) + '&nbsp; <br/>&nbsp;' + hdms + '&nbsp;'; 
+		        
+			}
+		}
+		else 
+                { return '<strong>' + NGR + '</strong>&nbsp; <br/>' + ol.coordinate.format(coord27700, '{x}, {y}', 0) + 
+			'&nbsp; <br/>' + ol.coordinate.format(coordinate, '{y}, {x}', 5) + '&nbsp; <br/>&nbsp;' + hdms + '&nbsp;'; }
+            	}
+    });
+
+    map.addControl(mouseposition);
+
+
+	// Print control
+	var printControl = new ol.control.PrintDialog();
+	printControl.setSize('A4');
+	map.addControl(printControl);
+
+	map.addControl(new ol.control.CanvasAttribution({ canvas: true }));
+	
+	map.addControl(new ol.control.CanvasScaleLine());
+
+
+
+	printControl.on(['print', 'error'], function(e) {
+		
+
+		
+	  // Print success
+	  if (e.image) {
+		if (e.pdf) {
+		  // Export pdf using the print info
+		  var pdf = new jsPDF({
+			orientation: e.print.orientation,
+			unit: e.print.unit,
+			format: e.print.size
+		  });
+		  pdf.addImage(e.image, 'JPEG', e.print.position[0], e.print.position[0], e.print.imageWidth, e.print.imageHeight);
+		  
+//		  console.log("e.print.imageHeight: " + e.print.imageHeight);
+		  pdf.save(e.print.legend ? 'legend.pdf' : 'map.pdf');
+		} else  {
+		  // Save image as file
+		  e.canvas.toBlob(function(blob) {
+			var timestamp = generateTimestamp();
+			console.log("timestamp: " + timestamp);
+			var name = (e.print.legend ? 'legend.' : 'map')+ timestamp + '.' + e.imageType.replace('image/','');
+			saveAs(blob, name);
+		  }, e.imageType, e.quality);
+		}
+	  } else {
+		console.warn('No canvas to export');
+	  }
+	  
+
+	});
+
+
+// Global cache of layer extents: { 'workspace:layername': [minx, miny, maxx, maxy] }
+const layerExtents = {};
+
+// Fetch and parse WMS GetCapabilities, then populate layerExtents
+function loadLayerExtentsFromWMS() {
+  const url = 'https://geoserver-ldl.nls.uk/geoserver/wms?service=WMS&version=1.3.0&request=GetCapabilities';
+
+  fetch(url)
+    .then(response => response.text())
+    .then(text => {
+      const parser = new ol.format.WMSCapabilities();
+      const result = parser.read(text);  // Parsed capabilities object[web:129]
+
+      if (!result.Capability || !result.Capability.Layer || !result.Capability.Layer.Layer) {
+        console.warn('No layers found in WMS capabilities');
+        return;
+      }
+
+      // Root layer can have nested layers; flatten them
+      const layers = result.Capability.Layer.Layer;
+
+      layers.forEach(layer => {
+        if (!layer.Name) return;
+
+        // Prefer EX_GeographicBoundingBox, fallback to LatLonBoundingBox / BoundingBox
+        let extent = null;
+
+        if (layer.EX_GeographicBoundingBox) {
+          const e = layer.EX_GeographicBoundingBox;
+          // [westBoundLongitude, southBoundLatitude, eastBoundLongitude, northBoundLatitude][web:129]
+          extent = [e[0], e[1], e[2], e[3]];
+        } else if (layer.BoundingBox && layer.BoundingBox.length > 0) {
+          // Use first BoundingBox if present (may be in WMS CRS like EPSG:3857)
+          const bb = layer.BoundingBox[0];
+          extent = [bb.extent[0], bb.extent[1], bb.extent[2], bb.extent[3]];
+        }
+
+        if (extent) {
+          // Store by fully-qualified layer name
+          layerExtents[layer.Name] = extent;
+        }
+      });
+
+      console.log('Loaded WMS layer extents:', layerExtents);
+    })
+    .catch(err => {
+      console.error('Error loading WMS GetCapabilities:', err);
+    });
+}
+
+// Call once at startup
+loadLayerExtentsFromWMS();
+
+// Zoom to layer helper
+// layerName should be the WMS layer name, e.g. 'eld:protectedareas_biogen'
+function zoomToLayer(layerName) {
+  const extent = layerExtents[layerName];
+  if (!extent) {
+    console.warn('No extent cached for layer:', layerName);
+    return;
+  }
+
+  // Capabilities extents are usually in EPSG:4326; transform to map projection if needed[web:129]
+  const view = map.getView();
+  const mapProj = view.getProjection();
+  let transformedExtent = extent;
+
+  if (mapProj && mapProj.getCode() !== 'EPSG:4326') {
+    transformedExtent = ol.proj.transformExtent(extent, 'EPSG:4326', mapProj);
+  }
+
+  view.fit(transformedExtent, {
+    size: map.getSize(),
+    maxZoom: 14,     // adjust to taste
+    duration: 500    // animated zoom
+  });
+}
+
+// Cache of WFS layer metadata: { 'protectedareas:biogen': { name, title, abstract, keywords } }
+let wfsLayerMetadata = {};
+
+
+async function loadLayerMetadata() {
+  try {
+    const response = await fetch('https://maps.nls.uk/eld/assets/layers-metadata.js');
+    const data = await response.json();
+
+    // If wfsLayerMetadata is let:
+    // wfsLayerMetadata = {};
+
+    // If wfsLayerMetadata is const, clear it instead:
+    Object.keys(wfsLayerMetadata).forEach(key => delete wfsLayerMetadata[key]);
+
+    // Copy all entries from the JSON into wfsLayerMetadata
+    Object.keys(data).forEach(typename => {
+      wfsLayerMetadata[typename] = data[typename];
+    });
+
+    console.log(`Loaded metadata for ${Object.keys(wfsLayerMetadata).length} layers`);
+  } catch (error) {
+    console.error('Failed to load layer metadata:', error);
+  }
+}
+
+
+// Call on app init, before layerManager setup
+loadLayerMetadata();
+
+
+
+
+// Custom Search control
+class SearchControl extends ol.control.Control {
+  constructor(opt_options) {
+    const options = opt_options || {};
+
+    const button = document.createElement('button');
+    button.innerHTML = '🔍';
+    button.title = 'Open search panel';
+
+    const element = document.createElement('div');
+    element.className = 'search-control ol-unselectable ol-control';
+    element.appendChild(button);
+
+    super({
+      element: element,
+      target: options.target
+    });
+
+    button.addEventListener('click', () => {
+      const panel = document.getElementById('search-panel');
+      if (!panel) return;
+      const isVisible = panel.style.display !== 'none';
+      panel.style.display = isVisible ? 'none' : 'flex';
+    });
+  }
+}
+
+// Add control to map
+const searchControl = new SearchControl();
+map.addControl(searchControl);
+
+// Close button for panel
+const searchPanelClose = document.getElementById('search-panel-close');
+if (searchPanelClose) {
+  searchPanelClose.addEventListener('click', () => {
+    const panel = document.getElementById('search-panel');
+    if (panel) panel.style.display = 'none';
+  });
+}
+
+if (document.getElementById("nlsgaz") != null) {
+
+         // Initialize the Gazetteer with autocomplete and County+Parish selector
+     nlsgaz(function(minx,miny,maxx,maxy){
+		 
+
+	 var currentZoom = map.getView().getZoom();
+         var extent = [minx, miny, maxx, maxy];
+
+
+
+         extent = ol.extent.applyTransform(extent, ol.proj.getTransform("EPSG:4326", "EPSG:3857"));
+
+
+
+	 var y = extent[1] + (extent[3] - extent[1]) / 2; 
+   var x = extent[0] + (extent[2] - extent[0]) / 2; 
+	
+  var resolution = map.getView().getResolutionForExtent(extent, map.getSize());
+	 var zoom1 = map.getView().getZoomForResolution(resolution);
+
+	 if (map.getSize()[0] < 600 ) 
+
+	{
+	 var zoom = Math.round(zoom1 - 1);
+	}
+	else
+	{
+	 var zoom = Math.round(zoom1);
+	}
+
+
+	MaxZoom = 16;
+	
+
+    
+	 if ((zoom < 3) || (isNaN(zoom)) || (zoom > MaxZoom))
+		{ zoom = MaxZoom; }
+
+    console.log("MaxZoom: " + MaxZoom);
+    console.log("xy: " + x + " " + y);
+
+
+
+//			map.getView().setCenter([x , y ]);
+//			map.getView().setZoom(zoom);
+  map.getView().fit(extent, {
+    size: map.getSize(),
+    maxZoom: 14,     // adjust to taste
+    duration: 500    // animated zoom
+  });
+
+	
+
+    
+
+})
+
+}
+
+
+
+
+/**
+ * Parses Grid Reference to OsGridRef object.
+ *
+ * Accepts standard Grid References (eg 'SU 387 148'), with or without whitespace separators, from
+ * two-digit references up to 10-digit references (1m × 1m square), or fully numeric comma-separated
+ * references in metres (eg '438700,114800').
+ *
+ * @param   {string}    gridref - Standard format OS Grid Reference.
+ * @returns {OsGridRef} Numeric version of Grid Reference in metres from false origin (SW corner of
+ *   supplied grid square).
+ * @throws Error on Invalid Grid Reference.
+ *
+ * @example
+ *   var grid = OsGridRef.parse('TG 51409 13177'); // grid: { easting: 651409, northing: 313177 }
+ */
+
+function gridreferror() {
+
+
+		modal.style.display = "block";
+
+		document.getElementById('modal-text').innerHTML = 'Sorry - this entry could not be located. Please type: <br/>' +
+					'1. A standard <strong>National Grid Reference</strong> (eg. "NT 263 721", "NT263721" ), ' +
+					'with or without whitespace separators, from two-digit references (eg. "NT26" - 10km x 10km square) ' +
+					'up to 10-digit references (eg. "NT2637572134" - 1m × 1m square), ' +
+					'or a fully numeric comma-separated reference in metres (eg "326375,672134");<br/>' +
+					'2. <strong>latitute, longitude</strong> with a decimal point after the degree number (eg. "52.123,-2.345");<br/>' +
+					'3. a <strong>postcode</strong> area (ie. "EH"), district (ie. "EH9"), sector (ie. "EH9 1"), or the full unit ' +
+					'(ie. "EH9 1SL"), either with a space in the middle (ie. "EH9 1SL") or without (ie. "EH91SL"). <br/><br/>' +
+					'Click on the cross (top right) or outside this box to close it.';
+
+	}
+
+
+function gridreference (gridref) {
+    gridref = String(gridref).trim();
+
+console.log("gridreflength: " + gridref.length);
+
+    // check for fully numeric comma-separated gridref format
+    var match = gridref.match(/^(\d+),\s*(\d+)$/);
+    if (match) return [match[1], match[2]];
+
+    // validate format
+    match = gridref.match(/^[A-Z]{2}\s*[0-9]+\s*[0-9]+$/i);
+	if (!match) { 
+	
+		if (gridref.indexOf('.') )
+			{
+				
+				
+				var gridreflength = gridref.length;
+
+				var latlon = gridref.split(',');
+
+				if ((latlon[0].length < 1) || (latlon[1].length < 1))
+
+				{	
+				gridreferror(); 
+				return; 
+				}
+				
+				if (( Math.round(latlon[1]) > 90 ) || ( Math.round(latlon[1]) < -90 ) || ( Math.round(latlon[0]) > 180 ) || ( Math.round(latlon[1]) < -180 ))
+					
+				{	
+				gridreferror(); 
+				return; 
+				}	
+
+				
+				var point3857 = ol.proj.transform([latlon[1],latlon[0]],"EPSG:4326", "EPSG:3857");
+				
+				var x = point3857[0].toFixed(0);
+				var y = point3857[1].toFixed(0);
+				
+				if (gridreflength < 10) { oSzoom = 10; }
+					else if ((gridreflength > 9) && (gridreflength < 12)) { oSzoom = 12; }
+					else if ((gridreflength > 11) && (gridreflength < 14)) { oSzoom = 14; }
+					else if (gridreflength > 14)  { oSzoom = 16; }
+
+				
+				map.getView().setCenter([x , y ]);
+				map.getView().setZoom(oSzoom);				
+				
+				return;
+			}	
+		else
+			{	
+			gridreferror(); 
+			return; 
+			}
+	}
+
+    // get numeric values of letter references, mapping A->0, B->1, C->2, etc:
+    var l1 = gridref.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+    var l2 = gridref.toUpperCase().charCodeAt(1) - 'A'.charCodeAt(0);
+    // shuffle down letters after 'I' since 'I' is not used in grid:
+    if (l1 > 7) l1--;
+    if (l2 > 7) l2--;
+
+    // convert grid letters into 100km-square indexes from false origin (grid square SV):
+    var e100km = ((l1-2)%5)*5 + (l2%5);
+    var n100km = (19-Math.floor(l1/5)*5) - Math.floor(l2/5);
+
+    // skip grid letters to get numeric (easting/northing) part of ref
+    var en = gridref.slice(2).trim().split(/\s+/);
+    // if e/n not whitespace separated, split half way
+    if (en.length == 1) en = [ en[0].slice(0, en[0].length/2), en[0].slice(en[0].length/2) ];
+
+    // validation
+    if (e100km<0 || e100km>6 || n100km<0 || n100km>12) {  gridreferror(); return; }
+    if (en.length != 2) { gridreferror();  return; }
+    if (en[0].length != en[1].length) { gridreferror();  return; }
+
+    // standardise to 10-digit refs (metres)
+  console.log("en[0]: " + en[0]);
+ console.log("en[1]: " + en[1]);
+
+    if (gridref.length == 2)
+	{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'500000').slice(0, 5);  }
+    if (gridref.length == 3)
+	{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'500000').slice(0, 5);  }
+    else if (gridref.length == 4)
+	{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'50000').slice(0, 5);  }
+    else if (gridref.length == 5)
+	{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'50000').slice(0, 5);  }
+    else if (gridref.length == 6)
+	{en[0] = (en[0]+'5000').slice(0, 5); en[1] = (en[1]+'5000').slice(0, 5);  }
+    else if (gridref.length == 7)
+	{en[0] = (en[0]+'5000').slice(0, 5); en[1] = (en[1]+'5000').slice(0, 5);  }
+    else if (gridref.length == 8)
+	{en[0] = (en[0]+'500').slice(0, 5); en[1] = (en[1]+'500').slice(0, 5);  }
+    else if (gridref.length == 9)
+	{en[0] = (en[0]+'500').slice(0, 5); en[1] = (en[1]+'500').slice(0, 5);  }
+    else if (gridref.length == 10)
+	{en[0] = (en[0]+'50').slice(0, 5); en[1] = (en[1]+'50').slice(0, 5);  }
+    else if (gridref.length == 11)
+	{en[0] = (en[0]+'5').slice(0, 5); en[1] = (en[1]+'5').slice(0, 5);  }
+    else if (gridref.length == 12)
+	{en[0] = (en[0]+'5').slice(0, 5); en[1] = (en[1]+'5').slice(0, 5);  }
+
+// console.log("en2[0]: " + en[0]);
+// console.log("en2[1]: " + en[1]);
+
+
+    var e = e100km + en[0];
+    var n = n100km + en[1];
+
+// console.log("e: " + e);
+// console.log("n: " + n);
+
+    return [e, n];
+
+};
+
+
+	    const markerSource = new ol.source.Vector();
+			const markerLayer = new ol.layer.Vector({
+				name: 'os-places',
+				source: markerSource,
+				   style: new ol.style.Style({
+					image: new ol.style.Circle({
+								  radius: 6,
+									fill: new ol.style.Fill({
+									color: 'rgba(0, 0, 0, 0)'
+											}),
+								  stroke: new ol.style.Stroke({
+									color: 'rgba(0, 0, 0, 0)'
+
+								  }),
+						})
+				})
+			});
+
+
+		map.getLayers().insertAt(2, markerLayer);
+
+
+function gridreference (gridref) {
+    gridref = String(gridref).trim();
+
+ console.log("gridref: " + gridref);
+
+    // check for fully numeric comma-separated gridref format
+    var match = gridref.match(/^(\d+),\s*(\d+)$/);
+    if (match) return [match[1], match[2]];
+
+    // validate format
+
+    match = gridref.match(/^[A-Z]{2}\s*[0-9]+\s*[0-9]+$/i);
+
+
+    if (!match) { 
+
+				console.log("yes"); 	
+	
+		var matchNW = gridref.match(/^[A-Z]{2}\s*[0-9]+\s*[0-9]+\s*[A-Z]{2}$/i);
+	
+		if (matchNW)
+			
+		
+	//			if ( gridref.toUpperCase().endsWith('NW') ) 
+			
+			{
+
+	//|| gridref.endsWith('NE') || gridref.endsWith('SW') || gridref.endsWith('SE')		
+
+
+
+				var quadrant;
+				
+				if ( gridref.toUpperCase().endsWith('NW') ) 
+				{ quadrant = 'NW'; }
+				else if ( gridref.toUpperCase().endsWith('NE') ) 
+				{ quadrant = 'NE'; }
+				else if ( gridref.toUpperCase().endsWith('SW') ) 
+				{ quadrant = 'SW'; }
+				else if ( gridref.toUpperCase().endsWith('SE') ) 
+				{ quadrant = 'SE'; }
+
+					console.log("quadrant: " + quadrant); 
+
+					// get numeric values of letter references, mapping A->0, B->1, C->2, etc:
+					var l1 = gridref.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+					var l2 = gridref.toUpperCase().charCodeAt(1) - 'A'.charCodeAt(0);
+					// shuffle down letters after 'I' since 'I' is not used in grid:
+					if (l1 > 7) l1--;
+					if (l2 > 7) l2--;
+
+					// convert grid letters into 100km-square indexes from false origin (grid square SV):
+					var e100km = ((l1-2)%5)*5 + (l2%5);
+					var n100km = (19-Math.floor(l1/5)*5) - Math.floor(l2/5);
+
+
+					// skip grid letters to get numeric (easting/northing) part of ref
+					var en1 = gridref.slice(0, -2).trim();
+					var en = en1.slice(2).trim().split(/\s+/);
+					// if e/n not whitespace separated, split half way
+					if (en.length == 1) en = [ en[0].slice(0, en[0].length/2), en[0].slice(en[0].length/2) ];
+
+					// validation
+					if (e100km<0 || e100km>6 || n100km<0 || n100km>12) {  gridreferror(); return; }
+					if (en.length != 2) { gridreferror();  return; }
+					if (en[0].length != en[1].length) { gridreferror();  return; }
+
+					// standardise to 10-digit refs (metres)
+
+				// console.log("en[0]: " + en[0]);
+				// console.log("en[1]: " + en[1]);
+
+
+					
+					console.log("quadrant: " + quadrant); 
+						
+
+
+					if (gridref.length == 2)
+					{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'500000').slice(0, 5);  }
+					if (gridref.length == 3)
+					{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'500000').slice(0, 5);  }
+					else if (gridref.length == 4)
+					{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'50000').slice(0, 5);  }
+					else if (gridref.length == 5)
+					{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'50000').slice(0, 5);  }
+					else if (gridref.length == 6)
+					{ if (quadrant == 'NW')
+						{en[0] = (en[0]+'2500').slice(0, 5); en[1] = (en[1]+'7500').slice(0, 5);  }
+					  else if (quadrant == 'NE')
+						{en[0] = (en[0]+'7500').slice(0, 5); en[1] = (en[1]+'7500').slice(0, 5);  }
+					  else if (quadrant == 'SW')
+						{en[0] = (en[0]+'2500').slice(0, 5); en[1] = (en[1]+'2500').slice(0, 5);  }
+					  else if (quadrant == 'SE')
+						{en[0] = (en[0]+'7500').slice(0, 5); en[1] = (en[1]+'2500').slice(0, 5);  }
+						else
+						{
+						gridreferror(); 
+						return;   
+						}
+					}
+					else if (gridref.length == 7)
+
+					{en[0] = (en[0]+'5000').slice(0, 5); en[1] = (en[1]+'5000').slice(0, 5);  }
+					else if (gridref.length == 8)
+					{ if (quadrant == 'NW')
+						{en[0] = (en[0]+'250').slice(0, 5); en[1] = (en[1]+'750').slice(0, 5);  }
+					  else if (quadrant == 'NE')
+						{en[0] = (en[0]+'750').slice(0, 5); en[1] = (en[1]+'750').slice(0, 5);  }
+					  else if (quadrant == 'SW')
+						{en[0] = (en[0]+'250').slice(0, 5); en[1] = (en[1]+'250').slice(0, 5);  }
+					  else if (quadrant == 'SE')
+						{en[0] = (en[0]+'750').slice(0, 5); en[1] = (en[1]+'250').slice(0, 5);  }
+						else
+						{
+						gridreferror(); 
+						return;   
+						}
+					}
+					else if (gridref.length == 9)
+					{en[0] = (en[0]+'500').slice(0, 5); en[1] = (en[1]+'500').slice(0, 5);  }
+					else if (gridref.length == 10)
+					{en[0] = (en[0]+'50').slice(0, 5); en[1] = (en[1]+'50').slice(0, 5);  }
+					else if (gridref.length == 11)
+					{en[0] = (en[0]+'5').slice(0, 5); en[1] = (en[1]+'5').slice(0, 5);  }
+					else if (gridref.length == 12)
+					{en[0] = (en[0]+'5').slice(0, 5); en[1] = (en[1]+'5').slice(0, 5);  }
+				
+					
+
+				// console.log("en2[0]: " + en[0]);
+				// console.log("en2[1]: " + en[1]);
+
+
+					var e = e100km + en[0];
+					var n = n100km + en[1];
+
+				// console.log("e: " + e);
+				// console.log("n: " + n);
+
+					return [e, n];
+
+
+
+
+			}
+
+		if (!matchNW) { 
+		
+			if (gridref.indexOf('.') )
+				{
+					
+					
+					var gridreflength = gridref.length;
+					
+
+
+					var latlon = gridref.split(',');
+					
+	//				console.log("latlon[0].length: " + latlon[0].length);
+					
+					if ((latlon[0].length < 1) || (latlon[1].length < 1))
+
+					{	
+					gridreferror(); 
+					return; 
+					}
+					
+					if (( Math.round(latlon[1]) > 90 ) || ( Math.round(latlon[1]) < -90 ) || ( Math.round(latlon[0]) > 180 ) || ( Math.round(latlon[1]) < -180 ))
+						
+					{	
+					gridreferror(); 
+					return; 
+					}			
+					
+					var point3857 = ol.proj.transform([latlon[1],latlon[0]],"EPSG:4326", "EPSG:3857");
+					
+					var x = point3857[0].toFixed(0);
+					var y = point3857[1].toFixed(0);
+					
+
+					
+					if (overlaySelected.get('maxZ'))
+						{
+						var oszoom = overlaySelected.get('maxZ');
+						var oSzoom = parseInt(oszoom - 1);
+						}
+						else
+						{
+						if (gridreflength < 10) { oSzoom = 10; }
+							else if ((gridreflength > 9) && (gridreflength < 12)) { oSzoom = 12; }
+							else if ((gridreflength > 11) && (gridreflength < 14)) { oSzoom = 14; }
+							else if (gridreflength > 14)  { oSzoom = 16; }
+						}
+					
+					map.getView().setCenter([x , y ]);
+					map.getView().setZoom(oSzoom);
+					
+					updateUrl();
+
+					return;
+				}	
+		}
+
+		else
+			{	
+			gridreferror(); 
+			return; 
+			}
+	}
+    // get numeric values of letter references, mapping A->0, B->1, C->2, etc:
+    var l1 = gridref.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+    var l2 = gridref.toUpperCase().charCodeAt(1) - 'A'.charCodeAt(0);
+    // shuffle down letters after 'I' since 'I' is not used in grid:
+    if (l1 > 7) l1--;
+    if (l2 > 7) l2--;
+
+    // convert grid letters into 100km-square indexes from false origin (grid square SV):
+    var e100km = ((l1-2)%5)*5 + (l2%5);
+    var n100km = (19-Math.floor(l1/5)*5) - Math.floor(l2/5);
+
+    // skip grid letters to get numeric (easting/northing) part of ref
+    var en = gridref.slice(2).trim().split(/\s+/);
+    // if e/n not whitespace separated, split half way
+    if (en.length == 1) en = [ en[0].slice(0, en[0].length/2), en[0].slice(en[0].length/2) ];
+
+    // validation
+    if (e100km<0 || e100km>6 || n100km<0 || n100km>12) {  gridreferror(); return; }
+    if (en.length != 2) { gridreferror();  return; }
+    if (en[0].length != en[1].length) { gridreferror();  return; }
+
+    // standardise to 10-digit refs (metres)
+
+// console.log("en[0]: " + en[0]);
+// console.log("en[1]: " + en[1]);
+
+
+
+    if (gridref.length == 2)
+	{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'500000').slice(0, 5);  }
+    if (gridref.length == 3)
+	{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'500000').slice(0, 5);  }
+    else if (gridref.length == 4)
+	{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'50000').slice(0, 5);  }
+    else if (gridref.length == 5)
+	{en[0] = (en[0]+'50000').slice(0, 5); en[1] = (en[1]+'50000').slice(0, 5);  }
+    else if (gridref.length == 6)
+	{en[0] = (en[0]+'5000').slice(0, 5); en[1] = (en[1]+'5000').slice(0, 5);  }
+    else if (gridref.length == 7)
+	{en[0] = (en[0]+'5000').slice(0, 5); en[1] = (en[1]+'5000').slice(0, 5);  }
+    else if (gridref.length == 8)
+	{en[0] = (en[0]+'500').slice(0, 5); en[1] = (en[1]+'500').slice(0, 5);  }
+    else if (gridref.length == 9)
+	{en[0] = (en[0]+'500').slice(0, 5); en[1] = (en[1]+'500').slice(0, 5);  }
+    else if (gridref.length == 10)
+	{en[0] = (en[0]+'50').slice(0, 5); en[1] = (en[1]+'50').slice(0, 5);  }
+    else if (gridref.length == 11)
+	{en[0] = (en[0]+'5').slice(0, 5); en[1] = (en[1]+'5').slice(0, 5);  }
+    else if (gridref.length == 12)
+	{en[0] = (en[0]+'5').slice(0, 5); en[1] = (en[1]+'5').slice(0, 5);  }
+
+// console.log("en2[0]: " + en[0]);
+// console.log("en2[1]: " + en[1]);
+
+
+    var e = e100km + en[0];
+    var n = n100km + en[1];
+
+// console.log("e: " + e);
+// console.log("n: " + n);
+
+    return [e, n];
+
+
+};
+
+
+
+function hasTwoLettersThenFourNumbers(str) {
+  return /^[A-Za-z]{2}\d{4}$/.test(str);
+}
+
+function hasTwoLettersThenSixNumbers(str) {
+  return /^[A-Za-z]{2}\d{6}$/.test(str);
+}
+	
+// Further details on OS Open Names	https://labs.os.uk/api/docs/opennames/
+
+function postcodegaz(value) {
+	
+
+	
+	if (value.includes('Type NGR'))
+
+			{ 
+			gridreferror(); 
+			return;
+			}
+	
+	else if (value.includes('~'))
+	
+			{ ngrgaz(value); 
+			return;
+			}
+	
+	else if (value.includes('lon'))
+	
+			{ ngrgaz(value); 
+			return;
+			}
+			
+	else if (value.includes('Northing'))
+	
+			{ ngrgaz(value); 
+			return;
+			}
+			
+	else if (value.includes('Longitude'))
+	
+			{ ngrgaz(value); 
+			return;
+			}
+			
+	else if (value.includes('&y='))
+	
+			{ ngrgaz(value); 
+			return;
+			}
+	else if ((value.length == 6) && (hasTwoLettersThenFourNumbers(value)))
+			{
+			ngrgaz(value); 
+			return;
+			}
+	else if ((value.length == 8) && (hasTwoLettersThenSixNumbers(value)))
+			{
+			ngrgaz(value); 
+			return;
+			}	
+	else if (value.length > 9)
+			{
+			ngrgaz(value); 
+			return;
+			}	
+			
+	else
+		
+		{
+	
+	
+		$("#loading").show();
+		
+
+		const apiKey = 'Q9ESJToD1he64kb6Aacq2Wqjy2EMhkUY';
+
+//        const url = 'https://api.os.uk/search/places/v1/postcode?postcode=' + value + '&key=' + apiKey;
+
+			const url = 'https://geoserver2.nls.uk/geoserver/wfs?service=WFS&version=2.0.0&request=GetFeature' +
+			'&typename=nls:codepoint&PropertyName=postcode,Easting,Northing&outputFormat=text/javascript' +
+			'&format_options=callback:handleJson3857&CQL_FILTER=postcode%20LIKE%20%27' + value + '%25%27&srsname=EPSG:900913';
+			
+			let valueUPPER = value.toUpperCase();
+
+			value2 = valueUPPER+'%';
+			
+			
+			if (value.includes(' '))
+				
+				{
+
+				var featureRequest = new ol.format.WFS().writeGetFeature({
+				  request: 'GetFeature',
+				  srsName: 'EPSG:3857',
+				  featureNS: 'https://www.nls.uk',
+				  featurePrefix: 'nls',
+				  featureTypes: ['codepoint'],
+				  propertyNames: ['geometry'],
+				  outputFormat: 'application/json',
+				  filter: ol.format.filter.like ('postcode', value2)
+					
+				  });					
+				}
+				
+				else
+					
+				{
+					var featureRequest = new ol.format.WFS().writeGetFeature({
+				  request: 'GetFeature',
+				  srsName: 'EPSG:3857',
+				  featureNS: 'https://www.nls.uk',
+				  featurePrefix: 'nls',
+				  featureTypes: ['codepoint'],
+				  propertyNames: ['geometry'],
+				  outputFormat: 'application/json',
+				  filter: ol.format.filter.like ('postcnsp', value2)
+					
+					});		
+				  
+				}
+			
+		// then post the request and add the received features to a layer
+		fetch('https://geoserver3.nls.uk/geoserver/wfs', {
+
+
+		  method: 'POST',
+
+		  body: new XMLSerializer().serializeToString(featureRequest)
+		}).then(function(response) {
+
+		  return response.json();
+		}).then(function(json) {
+			
+        markerSource.clear(true);
+	
+
+				
+		  var features = new ol.format.GeoJSON().readFeatures(json);
+		  markerSource.addFeatures(features);
+
+					
+				const clusterFeatureNum = map.getLayers().getArray()[2].getSource().getFeatures().length;	
+
+				console.log("clusterFeatureNum: " + clusterFeatureNum);					
+				
+				const clusterFeatureExtent = map.getLayers().getArray()[2].getSource().getExtent();
+				
+				console.log("extent: " + clusterFeatureExtent);
+
+
+				if ( clusterFeatureNum > 0 )
+					
+					{
+						
+						console.log("greater than 1");
+							
+							const clusterFeatureExtent1 = map.getLayers().getArray()[2].getSource().getExtent()[0].toFixed(0);
+							const clusterFeatureExtent2 = map.getLayers().getArray()[2].getSource().getExtent()[1].toFixed(0);
+							const clusterFeatureExtent3 = map.getLayers().getArray()[2].getSource().getExtent()[2].toFixed(0);
+							const clusterFeatureExtent4 = map.getLayers().getArray()[2].getSource().getExtent()[3].toFixed(0);
+								
+						
+								 var x = clusterFeatureExtent[0] + (clusterFeatureExtent[2] - clusterFeatureExtent[0]) / 2; 
+								 var y = clusterFeatureExtent[1] + (clusterFeatureExtent[3] - clusterFeatureExtent[1]) / 2; 
+								 
+								 
+									map.getView().setCenter([x,y]);
+									
+									var zoom = map.getView().getZoom();	
+									
+									if (zoom > 16 ) zoom = 16; 
+			
+									map.getView().setZoom(16);
+									
+
+										var windowWidth = $(window).width();
+
+							$("#loading").hide();
+					}
+					
+					else
+					{
+						$("#loading").hide();
+						ngrgaz(value);
+						return;
+					}
+					
+            })
+			.catch(error => {
+				
+			    console.error("Fetch error:", error.message);
+				$("#loading").hide();
+				ngrgaz(value);
+				return;
+			})	
+		}
+
+}
+
+
+function ngrgaz(value) {
+
+	imageDATE = '';
+
+	value1 = value.replace('/', ',');
+	value2 = value1.replace('~', ',');
+	value3 = value2.replace('&lon=', ',');
+	value4 = value3.replace('Longitude =', ',');
+	value5 = value4.replace('Northing = ', ',');
+//	value6 = value5.replace(' ', ',');
+	value7 = value5.replace('&y=', ',');
+	
+// ~   &y=    Longitude =  Northing = 
+
+    var osgbnum = gridreference(value7);
+	
+         // var osgb = new OpenLayers.LonLat(osgbnum[0], osgbnum[1]);
+	if ((osgbnum) && (osgbnum != 'undefined'))
+	{
+	 point27700 = [];
+	 point27700.push(parseFloat(osgbnum[0]), parseFloat(osgbnum[1]));
+
+	outx = osgbnum[0];
+	outy = osgbnum[1];
+
+	if ((outx  < 0) || (outx > 700000 ) || (outy < 0) || (outy > 1300000 ))
+
+	{ 
+	// console.log('out of range');
+	return; 
+	}
+	 // console.log(point27700);
+	 point3857 = [];
+	 point3857 = ol.proj.transform(point27700,"EPSG:27700", "EPSG:3857");
+	 var a = map.getView().setCenter(point3857);
+    	 var b = map.getView().setZoom(10+value.length);
+	 var zoom1 = (10+value.length);
+	// return b;
+	 var zoom = Math.round(zoom1);
+
+	if (zoom > 16 ) zoom = 16; 
+
+	var x = point3857[0].toFixed(0);
+	var y = point3857[1].toFixed(0);
+
+
+	map.getView().setCenter([x , y ]);
+	map.getView().setZoom(zoom);
+
+//		setTimeout( function(){
+//		var epsg4326 = [];
+
+//		epsg4326 = ol.proj.transform([x,y], 'EPSG:3857', 'EPSG:4326');
+//		pointClicked = epsg4326[1].toFixed(5)   + ',' +  epsg4326[0].toFixed(5) ;
+//			pointClick(pointClicked);
+//		updateUrl();
+//		}, 2100); // delay 50 ms
+
+
+
+
+}
+else
+{ return; }
+
+      }
+	
+
+	document.getElementById("ngrgaz")
+	    .addEventListener("keyup", function(event) {
+	    event.preventDefault();
+		document.getElementById('search-button-ngrgaz').style.color = 'blue';
+	    if (event.keyCode === 13) {
+	       // document.getElementById("ngrgaz").click();
+		postcodegaz(document.getElementById("ngrgaz").value);
+
+
+	    }
+	});
+
+
+        // Initialize the Gazetteer with autocomplete and County+Parish selector
+     nlsgaz(function(minx,miny,maxx,maxy){
+
+
+      // // alert(minx + ' ' + miny + ' ' + maxx + ' ' + maxy);
+
+      // zoom to gridref
+
+      // zoom to bbox
+
+	 imageDATE = '';
+
+	 var currentZoom = map.getView().getZoom();
+         var extent = [minx, miny, maxx, maxy];
+
+         extent = ol.extent.applyTransform(extent, ol.proj.getTransform("EPSG:4326", "EPSG:3857"));
+
+//       map.getView().fit(extent, map.getSize());
+
+	 var y = extent[1] + (extent[3] - extent[1]) / 2; 
+
+	 if (map.getSize()[0] < 600 )
+
+		{
+	 	var x1 = extent[0] + (extent[2] - extent[0]) / 2; 
+	 	var x = extent[2] + (x1 - extent[0] ) / 2; 
+		}
+	else
+		{
+	 	var x = extent[0] + (extent[2] - extent[0]) / 2; 
+		}
+	
+  	 var resolution = map.getView().getResolutionForExtent(extent, map.getSize());
+	 var zoom1 = map.getView().getZoomForResolution(resolution);
+
+	 if (map.getSize()[0] < 600 ) 
+
+	{
+	 var zoom = Math.round(zoom1 - 1);
+	}
+	else
+	{
+	 var zoom = Math.round(zoom1);
+	}
+
+
+	var windowWidth = $(window).width();
+
+
+	 if ((zoom > 16 ) || (zoom < 3) || (isNaN(zoom)))
+		{ zoom = 16; }
+
+
+	      function flyTo(location, done) {
+	        var duration = 1000;
+	      //  var zoom = map.getView().getZoom();
+	        var parts = 2;
+	        var called = false;
+	        function callback(complete) {
+	          --parts;
+	          if (called) {
+	            return;
+	          }
+	          if (parts === 0 || !complete) {
+	            called = true;
+	            done(complete);
+	          }
+	        }
+	        map.getView().animate({
+	          center: location,
+	          duration: duration
+	        }, callback);
+	        map.getView().animate({
+	          zoom: zoom - 1,
+	          duration: duration / 2
+	        }, {
+	          zoom: zoom,
+	          duration: duration / 2
+	        }, callback);
+	      }
+
+
+		map.getView().setCenter([x , y ]);
+		map.getView().setZoom(zoom);
+
+//		setTimeout( function(){
+//		var epsg4326 = [];
+
+//		epsg4326 = ol.proj.transform([x,y], 'EPSG:3857', 'EPSG:4326');
+//		pointClicked = epsg4326[1].toFixed(5)   + ',' +  epsg4326[0].toFixed(5) ;
+//			pointClick(pointClicked);
+//		updateUrl();
+//		}, 2100); // delay 50 ms
+
+	var windowWidth = $(window).width();
+
+
+
+	}
+    );
+
+
+	$("#loading").hide();
+
+  </script>
+
+</body>
+</html>
